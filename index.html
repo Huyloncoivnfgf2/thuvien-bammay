@@ -652,6 +652,7 @@ function lockAdmin(){
 }
 function adminLogout(){
   try { sessionStorage.removeItem("tvbm-gtoken"); } catch(e) {}
+  try { localStorage.removeItem("tvbm-me"); localStorage.removeItem("tvbm-gtoken-cache"); localStorage.removeItem("tvbm-admin"); } catch(e) {}
   if (window.firebase && firebase.auth) firebase.auth().signOut().then(() => location.reload()); else location.reload();
 }
 function openAdmin(){
@@ -673,7 +674,13 @@ function renderAdmin(){
     return;
   }
   if (!isAdmin) {
-    body.innerHTML = '<div style="color:#93a7c2;font-size:14.5px;line-height:1.55">Bạn đang đăng nhập bằng tài khoản chủ. Nhập <b>mã chủ</b> để mở các công cụ quản trị (đăng thông báo, check dữ liệu…) — thoát quyền chủ thì bấm nút Thoát, không cần đăng xuất tài khoản.</div>'
+    if (!window.__fbOwner) {
+      body.innerHTML = '<div style="color:#93a7c2;font-size:14.5px;line-height:1.55">Để mở công cụ chủ, cần <b>xác thực Google của chủ</b> một chạm trước (chỉ đúng tài khoản chủ mới qua được), rồi nhập mã chủ.</div>'
+        + '<button class="adm-big" id="admGoogle">🔐 Xác thực Google chủ</button>';
+      document.getElementById("admGoogle").addEventListener("click", () => { if (window.__ownerGoogle) window.__ownerGoogle(); });
+      return;
+    }
+    body.innerHTML = '<div style="color:#93a7c2;font-size:14.5px;line-height:1.55">Đã xác thực Google chủ ✅ Nhập <b>mã chủ</b> để mở các công cụ quản trị — thoát quyền chủ thì bấm nút Thoát, không cần đăng xuất.</div> Nhập <b>mã chủ</b> để mở các công cụ quản trị (đăng thông báo, check dữ liệu…) — thoát quyền chủ thì bấm nút Thoát, không cần đăng xuất tài khoản.</div>'
       + '<input class="adm-input" id="admCode" type="password" inputmode="numeric" placeholder="Nhập mã chủ…" style="margin-top:11px">'
       + '<div class="adm-err" id="admErr"></div>'
       + '<button class="adm-big" id="admGo">👑 Vào quyền chủ</button>';
@@ -682,6 +689,7 @@ function renderAdmin(){
         isAdmin = true;
         try { localStorage.setItem("tvbm-admin", "1"); } catch(e) {}
         syncAdminUI(); renderAdmin();
+        if (window.__afterAdminUnlock) window.__afterAdminUnlock();
       } else document.getElementById("admErr").textContent = "Sai mã rồi 😅 Thử lại nhé.";
     };
     document.getElementById("admGo").addEventListener("click", go);
@@ -701,6 +709,15 @@ function renderAdmin(){
     + '<div class="adm-note" id="ntNote"></div>'
     + '<button class="adm-big" id="ntPost">📣 Đăng thông báo</button>'
     + '<div class="adm-links"><a target="_blank" rel="noopener" href="' + SHEET_URL + '">📗 Mở bảng Sheet</a><a target="_blank" rel="noopener" href="' + ((bm.recommend && bm.recommend.url) || '#') + '">📂 Mở kho Drive</a></div>'
+    + '<div style="font-weight:800;margin-top:16px">🔄 Dữ liệu thư viện cho học viên</div>'
+    + '<div class="adm-note" id="admCacheNote">Học viên xem bản dữ liệu đã lưu trên web. Sửa Sheet xong, bấm nút dưới để cập nhật cho mọi người.</div>'
+    + '<button class="adm-big" id="admRefresh">🔄 Cập nhật dữ liệu từ Sheet</button>'
+    + '<div style="font-weight:800;margin-top:16px">✅ Danh sách email được duyệt vào web</div>'
+    + '<div style="display:flex;gap:8px;margin-top:9px;align-items:stretch"><input class="adm-input" id="allowInput" placeholder="email@gmail.com" style="flex:1;margin-top:0"><button class="adm-big" id="allowAdd" style="width:auto;margin-top:0;padding:0 18px">Thêm</button></div>'
+    + '<div class="adm-note" id="allowNote"></div>'
+    + '<div id="allowList" style="margin-top:4px"></div>'
+    + '<div style="font-weight:800;margin-top:16px">🚪 Ai đã gõ email chưa được duyệt (bị chặn)</div>'
+    + '<div id="attList" style="margin-top:4px"></div>'
     + '<button class="adm-big" id="admOut" style="background:#1a2436;color:#c3d2e6;border:1.5px solid #54677f">🔒 Thoát quyền chủ (vẫn giữ đăng nhập)</button>';
   document.getElementById("ntPost").addEventListener("click", async () => {
     const t = document.getElementById("ntTitle").value.trim();
@@ -714,6 +731,11 @@ function renderAdmin(){
     } catch(e) { note.textContent = "Đăng chưa được, thử lại nhé 😅"; note.style.color = "#f0a3a3"; }
   });
   document.getElementById("admOut").addEventListener("click", lockAdmin);
+  document.getElementById("admRefresh").addEventListener("click", () => { if (window.__afterAdminUnlock) window.__afterAdminUnlock(); });
+  document.getElementById("allowAdd").addEventListener("click", () => { const v = document.getElementById("allowInput").value.trim().toLowerCase(); if (window.__addAllowed) window.__addAllowed(v); });
+  if (window.__loadAllowed) window.__loadAllowed();
+  if (window.__loadAttempts) window.__loadAttempts();
+  if (window.__cacheInfo) window.__cacheInfo();
 }
 
 /* ===== HO SO CA NHAN (ban thu) ===== */
@@ -830,28 +852,72 @@ function isImgAvatar(v){ return /^(data:|https?:|blob:)/.test(v || ""); }
 function gate(html){ const g = document.getElementById("gate"); g.style.display = "flex"; document.getElementById("gateBody").innerHTML = html; }
 function ungate(){ document.getElementById("gate").style.display = "none"; }
 function gBtn(id, label){ return '<button class="gate-btn" id="' + id + '"><span style="font-size:19px">G</span> ' + label + '</button>'; }
-function signinHTML(){ return '<div class="gate-emoji">📚</div><div class="gate-title">Thư viện Video Bấm Máy</div><div class="gate-note">Đăng nhập bằng Google để vào học.<br>Chỉ tài khoản được chủ chia sẻ bảng mới xem được nội dung nhé!</div>' + gBtn("gSignin", "Đăng nhập bằng Google"); }
-function needTokenHTML(){ return '<div class="gate-emoji">👋</div><div class="gate-title">Xin chào ' + esc(window.__email || "") + '!</div><div class="gate-note">Bấm tiếp tục để cấp quyền đọc bảng và vào thư viện.</div>' + gBtn("gSignin", "Tiếp tục với Google"); }
-function loadingHTML(){ return '<div class="gate-emoji">⏳</div><div class="gate-title">Đang tải thư viện…</div><div class="gate-note">Đang đọc dữ liệu mới nhất từ bảng của chủ.</div>'; }
-function noAccessHTML(){ return '<div class="gate-emoji">🚫</div><div class="gate-title">Tài khoản chưa được cấp quyền</div><div class="gate-note">' + esc(window.__email || "") + ' chưa có trong danh sách được chủ chia sẻ bảng.<br>Nhờ chủ thêm email này vào danh sách chia sẻ của bảng Google Sheet rồi quay lại nhé!</div><br><button class="gate-btn ghost" id="gSignout">🚪 Đăng xuất, đổi tài khoản</button>'; }
-function errorHTML(msg){ return '<div class="gate-emoji">😅</div><div class="gate-title">Có trục trặc nhỏ</div><div class="gate-note">' + esc(msg || "Chưa tải được dữ liệu. Kiểm tra mạng rồi thử lại nhé.") + '</div>' + gBtn("gSignin", "Thử lại"); }
-function wireSignin(){ const b = document.getElementById("gSignin"); if (b) b.addEventListener("click", doSignIn); const o = document.getElementById("gSignout"); if (o) o.addEventListener("click", adminLogout); }
-let proceeding = false, appStarted = false;
-async function proceedWithToken(token){
-  if (proceeding || appStarted) return;
-  proceeding = true;
-  gate(loadingHTML());
-  const ok = await loadSheetData(token);
-  proceeding = false;
-  if (ok === "noaccess") { gate(noAccessHTML()); wireSignin(); return; }
-  if (ok === "disabled") { gate(errorHTML("Google chưa bật cửa đọc Sheet/Drive cho web này. Chủ web cần bật Google Sheets API và Google Drive API trong Google Cloud Console (mục API Library) rồi đăng nhập lại nhé.")); wireSignin(); return; }
-  if (ok === "expired") { try { sessionStorage.removeItem("tvbm-gtoken"); } catch(e) {} gate(needTokenHTML()); wireSignin(); return; }
-  if (ok !== true) { gate(errorHTML()); wireSignin(); return; }
+function errorHTML(msg){ return '<div class="gate-emoji">😅</div><div class="gate-title">Có trục trặc nhỏ</div><div class="gate-note">' + esc(msg || "Chưa tải được dữ liệu. Kiểm tra mạng rồi thử lại nhé.") + '</div><br><button class="gate-btn" onclick="location.reload()">🔄 Thử lại</button>'; }
+function loadingHTML(){ return '<div class="gate-emoji">⏳</div><div class="gate-title">Đang tải thư viện…</div><div class="gate-note">Chờ một xíu nhé 🚀</div>'; }
+function emailGateHTML(msg){ return '<div class="gate-emoji">📚</div><div class="gate-title">Thư viện Video Bấm Máy</div><div class="gate-note">Nhập <b>email đã được chủ chia sẻ</b> để vào thư viện nhé — chỉ nhập 1 lần, web nhớ luôn, không cần mật khẩu.</div><input class="adm-input" id="gateEmail" type="email" placeholder="email-cua-ban@gmail.com" style="text-align:center" autocomplete="email"><div class="adm-err" id="gateErr">' + (msg || "") + '</div><button class="gate-btn" id="gateGo" style="margin-top:10px">🚪 Vào thư viện</button>'; }
+function wireEmailGate(){ const go = () => checkGateEmail(); const b = document.getElementById("gateGo"); if (b) b.addEventListener("click", go); const i = document.getElementById("gateEmail"); if (i) i.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); }); }
+async function checkGateEmail(){
+  const inp = document.getElementById("gateEmail"), err = document.getElementById("gateErr");
+  const em = ((inp && inp.value) || "").trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { err.textContent = "Email chưa đúng định dạng, kiểm tra lại nhé ✍️"; return; }
+  err.textContent = "Đang kiểm tra…";
+  let ok = (em === OWNER_EMAIL);
+  if (!ok) {
+    try { const s = await window.__db.collection("allowed").doc(em).get(); ok = s.exists; }
+    catch(e) { err.textContent = "Chưa kiểm tra được (máy chủ chưa mở cổng) — báo chủ web giúp mình nhé 🙏"; return; }
+  }
+  if (!ok) {
+    try { window.__db.collection("attempts").add({email: em, at: new Date().toISOString()}); } catch(e) {}
+    err.textContent = "Email này chưa được chủ duyệt 😢 Báo chủ thêm email của bạn vào danh sách trong web nhé.";
+    return;
+  }
+  try { localStorage.setItem("tvbm-me", em); } catch(e) {}
+  bootWithEmail(em);
+}
+function noCacheHTML(){ return '<div class="gate-emoji">🛠️</div><div class="gate-title">Thư viện đang chờ cập nhật</div><div class="gate-note">Chủ web chưa nạp dữ liệu lần đầu — quay lại sau ít phút nữa nhé 🙏</div><br><button class="gate-btn" onclick="location.reload()">🔄 Thử lại</button>'; }
+function ownerFirstHTML(){ return '<div class="gate-emoji">👑</div><div class="gate-title">Chào chủ web!</div><div class="gate-note">Thư viện chưa có dữ liệu. Bấm nút dưới và đăng nhập Google của chủ 1 lần để web lấy dữ liệu từ Sheet về cho mọi người.</div>' + gBtn("ownFirst", "Lấy dữ liệu từ Sheet"); }
+let appStarted = false;
+function enterLibrary(){
   startCloudSync();
   renderBlocks(); renderGrid(); renderBell(); syncAdminUI(); syncProfileBtn();
   ungate();
   appStarted = true;
   maybeSplash();
+}
+async function loadFromCache(){
+  try {
+    const s = await window.__db.collection("library").doc("cache").get();
+    if (!s.exists) return false;
+    const d = s.data() || {};
+    window.__cacheAt = d.updatedAt || "";
+    const c = JSON.parse(d.json || "{}");
+    if (c["bam-may"]) DATA["bam-may"] = c["bam-may"];
+    if (c["kinh-nghiem"]) DATA["kinh-nghiem"] = c["kinh-nghiem"];
+    return !!(DATA["bam-may"] && DATA["bam-may"].items);
+  } catch(e) { return false; }
+}
+async function writeCache(){
+  try { const now = new Date().toISOString(); await window.__db.collection("library").doc("cache").set({json: JSON.stringify(DATA), updatedAt: now}); window.__cacheAt = now; } catch(e) {}
+}
+async function bootWithEmail(em){
+  window.__uid = em; window.__email = em;
+  isOwner = (em === OWNER_EMAIL);
+  syncAdminUI();
+  gate(loadingHTML());
+  const ok = await loadFromCache();
+  if (ok) { enterLibrary(); return; }
+  if (isOwner) { gate(ownerFirstHTML()); const b = document.getElementById("ownFirst"); if (b) b.addEventListener("click", ownerFirstFetch); return; }
+  gate(noCacheHTML());
+}
+async function ownerFirstFetch(){
+  gate(loadingHTML());
+  const r = await doSignIn();
+  if (!r || r.email !== OWNER_EMAIL) { gate(errorHTML("Chưa đăng nhập đúng tài khoản chủ — bấm Thử lại và chọn đúng email chủ nhé.")); return; }
+  window.__fbOwner = true;
+  const ok = await loadSheetData(r.token);
+  if (ok !== true) { gate(errorHTML("Chưa đọc được Sheet (mã lỗi: " + ok + "). Kiểm tra API/quyền rồi thử lại nhé.")); return; }
+  await writeCache();
+  enterLibrary();
 }
 async function doSignIn(){
   try {
@@ -861,9 +927,63 @@ async function doSignIn(){
     provider.setCustomParameters({prompt: "consent"});
     const res = await firebase.auth().signInWithPopup(provider);
     const tok = res.credential && res.credential.accessToken;
-    if (tok) { try { sessionStorage.setItem("tvbm-gtoken", tok); } catch(e) {} saveTokenCache(tok); proceedWithToken(tok); }
-  } catch(e) { gate(errorHTML("Đăng nhập chưa thành công — mã lỗi: " + ((e && e.code) || "không rõ") + ". Chụp màn hình này gửi tôi để tôi sửa đúng chỗ nhé.")); wireSignin(); }
+    if (tok) { try { sessionStorage.setItem("tvbm-gtoken", tok); } catch(e) {} saveTokenCache(tok); }
+    return {email: ((res.user && res.user.email) || "").toLowerCase(), token: tok || null};
+  } catch(e) { return null; }
 }
+window.__ownerGoogle = async function(){
+  const r = await doSignIn();
+  if (r && r.email === OWNER_EMAIL) { window.__fbOwner = true; if (r.token) window.__gtoken = r.token; renderAdmin(); }
+  else alert("Tài khoản vừa chọn không phải tài khoản chủ 😅");
+};
+window.__afterAdminUnlock = async function(){
+  const note = document.getElementById("admCacheNote");
+  let tok = window.__gtoken || null;
+  if (!tok) { try { tok = sessionStorage.getItem("tvbm-gtoken"); } catch(e) {} }
+  if (!tok) tok = readTokenCache();
+  if (!tok) tok = await trySilentToken();
+  if (!tok) { if (note) note.textContent = "Chưa có quyền đọc Sheet — thoát quyền chủ, vào lại và xác thực Google để cập nhật."; return; }
+  if (note) note.textContent = "Đang đọc Sheet…";
+  const ok = await loadSheetData(tok);
+  if (ok === true) { await writeCache(); renderBlocks(); renderGrid(); if (note) note.textContent = "Đã cập nhật dữ liệu mới nhất từ Sheet ✅"; if (window.__cacheInfo) window.__cacheInfo(); }
+  else if (note) note.textContent = "Chưa đọc được Sheet (mã lỗi: " + ok + ") — thử lại sau nhé.";
+};
+window.__cacheInfo = function(){
+  const el = document.getElementById("admCacheNote");
+  if (el && window.__cacheAt) el.textContent = "Dữ liệu học viên đang xem được cập nhật lúc " + new Date(window.__cacheAt).toLocaleString("vi-VN") + ". Sửa Sheet xong, bấm nút Cập nhật ở trên để nạp bản mới.";
+};
+window.__loadAllowed = async function(){
+  const box = document.getElementById("allowList");
+  if (!box || !window.__db) return;
+  try {
+    const snap = await window.__db.collection("allowed").get();
+    if (snap.empty) { box.innerHTML = '<div class="adm-note">Chưa có email nào — thêm email học viên ở ô trên nhé.</div>'; return; }
+    box.innerHTML = snap.docs.map(d => '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:#101a2a;border:1px solid #2b3f5c;border-radius:10px;padding:7px 11px;margin-top:6px"><span style="font-size:13.5px;word-break:break-all">' + esc(d.id) + '</span><button data-del="' + esc(d.id) + '" style="background:#3a1620;color:#f0a3a3;border:1px solid #6e2a3a;border-radius:8px;padding:4px 10px;cursor:pointer;font-weight:700;flex:none">Xoá</button></div>').join("");
+    box.querySelectorAll("[data-del]").forEach(b => b.addEventListener("click", () => window.__delAllowed(b.getAttribute("data-del"))));
+  } catch(e) { box.innerHTML = '<div class="adm-note">Chưa tải được danh sách (cần xác thực Google chủ).</div>'; }
+};
+window.__addAllowed = async function(em){
+  const note = document.getElementById("allowNote");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { if (note) note.textContent = "Email chưa đúng định dạng ✍️"; return; }
+  try {
+    await window.__db.collection("allowed").doc(em).set({addedAt: new Date().toISOString()});
+    if (note) note.textContent = "Đã thêm " + em + " ✅ Bạn ấy nhập email này là vào được web.";
+    const inp = document.getElementById("allowInput"); if (inp) inp.value = "";
+    window.__loadAllowed();
+  } catch(e) { if (note) note.textContent = "Thêm chưa được — cần xác thực Google chủ trước 😅"; }
+};
+window.__delAllowed = async function(em){
+  try { await window.__db.collection("allowed").doc(em).delete(); window.__loadAllowed(); } catch(e) {}
+};
+window.__loadAttempts = async function(){
+  const box = document.getElementById("attList");
+  if (!box || !window.__db) return;
+  try {
+    const snap = await window.__db.collection("attempts").orderBy("at", "desc").limit(15).get();
+    if (snap.empty) { box.innerHTML = '<div class="adm-note">Chưa có ai gõ email chưa được duyệt 🎉</div>'; return; }
+    box.innerHTML = snap.docs.map(d => { const x = d.data(); return '<div style="font-size:13px;color:#c3d2e6;padding:5px 2px;border-bottom:1px dashed #2b3f5c">🚪 <b>' + esc(x.email || "") + '</b> — ' + new Date(x.at).toLocaleString("vi-VN") + '</div>'; }).join("");
+  } catch(e) { box.innerHTML = '<div class="adm-note">Chưa tải được (cần xác thực Google chủ).</div>'; }
+};
 function cellVal(c){ return (c && c.formattedValue) || ""; }
 function cellLink(c){
   if (!c) return null;
@@ -960,30 +1080,20 @@ function startCloudSync(){
 }
 document.getElementById("pfOut").addEventListener("click", () => adminLogout());
 function initCloud(){
-  if (firebaseConfig.apiKey.indexOf("__") === 0) { gate('<div class="gate-emoji">🔧</div><div class="gate-title">Web đang chờ gắn khóa truy cập</div><div class="gate-note">Chủ web đang hoàn thiện bước cuối — quay lại sau ít phút nhé!</div>'); return; }
   try { firebase.initializeApp(firebaseConfig); } catch(e) {}
   firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
   window.__db = firebase.firestore();
   try { window.__storage = firebase.storage(); } catch(e) {}
-  gate(loadingHTML());
-  firebase.auth().onAuthStateChanged(async (user) => {
-    if (!user) { gate(signinHTML()); wireSignin(); return; }
-    window.__uid = user.uid;
-    window.__email = user.email || "";
-    isOwner = (window.__email.toLowerCase() === OWNER_EMAIL);
-    let unlocked = false;
-    try { unlocked = localStorage.getItem("tvbm-admin") === "1"; } catch(e) {}
-    isAdmin = isOwner && unlocked;
-    syncAdminUI();
-    let token = null;
-    try { token = sessionStorage.getItem("tvbm-gtoken"); } catch(e) {}
-    if (!token) token = readTokenCache();
-    if (token) { proceedWithToken(token); return; }
-    gate(loadingHTML());
-    const silent = await trySilentToken();
-    if (silent) { proceedWithToken(silent); return; }
-    gate(needTokenHTML()); wireSignin();
-  });
+  firebase.auth().onAuthStateChanged((user) => { if (user && (user.email || "").toLowerCase() === OWNER_EMAIL) window.__fbOwner = true; });
+  let em = "";
+  try { em = (localStorage.getItem("tvbm-me") || "").toLowerCase(); } catch(e) {}
+  if (!em) { gate(emailGateHTML()); wireEmailGate(); return; }
+  (async () => {
+    if (em !== OWNER_EMAIL) {
+      try { const s = await window.__db.collection("allowed").doc(em).get(); if (!s.exists) { try { localStorage.removeItem("tvbm-me"); } catch(e) {} gate(emailGateHTML("Email này không còn trong danh sách được duyệt nữa.")); wireEmailGate(); return; } } catch(e) {}
+    }
+    bootWithEmail(em);
+  })();
 }
 initCloud();
 
