@@ -785,6 +785,7 @@ async function proceedWithToken(token){
   const ok = await loadSheetData(token);
   proceeding = false;
   if (ok === "noaccess") { gate(noAccessHTML()); wireSignin(); return; }
+  if (ok === "disabled") { gate(errorHTML("Google chưa bật cửa đọc Sheet/Drive cho web này. Chủ web cần bật Google Sheets API và Google Drive API trong Google Cloud Console (mục API Library) rồi đăng nhập lại nhé.")); wireSignin(); return; }
   if (ok === "expired") { try { sessionStorage.removeItem("tvbm-gtoken"); } catch(e) {} gate(needTokenHTML()); wireSignin(); return; }
   if (ok !== true) { gate(errorHTML()); wireSignin(); return; }
   startCloudSync();
@@ -856,7 +857,11 @@ async function loadSheetData(token){
     const fields = encodeURIComponent("sheets(properties.title,data(rowData(values(formattedValue,hyperlink,textFormatRuns))))");
     res = await fetch("https://sheets.googleapis.com/v4/spreadsheets/" + SHEET_ID + "?includeGridData=true&fields=" + fields, {headers: {Authorization: "Bearer " + token}});
   } catch(e) { return "error"; }
-  if (res.status === 403) return "noaccess";
+  if (res.status === 403) {
+    const body = await res.text().catch(() => "");
+    if (/SERVICE_DISABLED|accessNotConfigured|has not been used in project/i.test(body)) return "disabled";
+    return "noaccess";
+  }
   if (res.status === 401) return "expired";
   if (!res.ok) return "error";
   const j = await res.json();
