@@ -182,7 +182,6 @@
   .gate-btn:active { transform: scale(.96); }
   .gate-btn.ghost { background:transparent; color:#c3d2e6; border:1.5px solid #54677f; box-shadow:none; }
   .qa-imgs img { width:64px; height:64px; object-fit:cover; border-radius:9px; margin:3px 3px 0 0; }
-  #adminBtn { display:none; }
 </style>
 </head>
 <body>
@@ -225,7 +224,7 @@
   <div class="ava-grid" id="avaGrid"></div>
   <button class="adm-big" id="pfSave" style="background:linear-gradient(180deg,#3f8cff,#2b6fe0);color:#fff">💾 Lưu hồ sơ</button>
   <div id="pfEmail" style="color:#7c8ea9;font-size:13px;margin-top:11px"></div>
-  <button class="adm-big" id="pfOut" style="background:#1a2436;color:#c3d2e6;border:1.5px solid #54677f">🚪 Đăng xuất</button>
+  <button class="adm-big" id="pfOut" style="background:#1a2436;color:#c3d2e6;border:1.5px solid #54677f">🔒 Thoát quyền chủ</button>
 </div></div>
 <div id="adminModal"><div class="adm-card">
   <div class="wr-head"><div class="wr-title">🔑 Khu vực của chủ 👑</div><button id="admClose" title="Đóng">✕</button></div>
@@ -613,6 +612,7 @@ renderBlocks(); renderGrid();
 const ADMIN_CODE = "6868";
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/1SHM7OTLAe69pg3IqEv6kISUf2wvk7CdUV9h9LBpkrZo/edit";
 let isAdmin = false;
+let isOwner = false;
 let notifs = [], readIds = [];
 function saveNotifs(){ if (window.__udoc) window.__udoc.set({readNotifs: readIds}, {merge: true}).catch(() => {}); }
 function renderBell(){
@@ -634,7 +634,6 @@ function renderBellListOnly(){ renderBell(); }
 function syncAdminUI(){
   document.getElementById("adminBtn").textContent = isAdmin ? "👑" : "🔑";
   document.getElementById("adminBtn").classList.toggle("admin-on", isAdmin);
-  document.getElementById("adminBtn").style.display = isAdmin ? "flex" : "none";
   const strip = document.getElementById("adminStrip");
   if (isAdmin) {
     strip.style.display = "flex";
@@ -643,8 +642,13 @@ function syncAdminUI(){
       + '<a class="as-btn ghost" style="text-decoration:none" target="_blank" rel="noopener" href="' + SHEET_URL + '">📗 Mở bảng Sheet</a>'
       + '<button class="as-btn ghost" id="asLogout">🚪 Đăng xuất</button>';
     document.getElementById("asCompose").addEventListener("click", () => openAdmin());
-    document.getElementById("asLogout").addEventListener("click", adminLogout);
+    document.getElementById("asLogout").addEventListener("click", lockAdmin);
   } else { strip.style.display = "none"; strip.innerHTML = ""; }
+}
+function lockAdmin(){
+  isAdmin = false;
+  try { localStorage.removeItem("tvbm-admin"); } catch(e) {}
+  syncAdminUI(); closeAdmin();
 }
 function adminLogout(){
   try { sessionStorage.removeItem("tvbm-gtoken"); } catch(e) {}
@@ -664,8 +668,24 @@ document.getElementById("admClose").addEventListener("click", closeAdmin);
 document.getElementById("adminModal").addEventListener("click", (e) => { if (e.target.id === "adminModal") closeAdmin(); });
 function renderAdmin(){
   const body = document.getElementById("admBody");
-  if (!isAdmin) {
+  if (!isOwner) {
     body.innerHTML = '<div style="color:#93a7c2;font-size:14.5px;line-height:1.55">Khu vực này chỉ dành cho <b>chủ web</b> 👑 — quyền chủ gắn với tài khoản Google của chủ, tài khoản người học không vào được phần này.</div>';
+    return;
+  }
+  if (!isAdmin) {
+    body.innerHTML = '<div style="color:#93a7c2;font-size:14.5px;line-height:1.55">Bạn đang đăng nhập bằng tài khoản chủ. Nhập <b>mã chủ</b> để mở các công cụ quản trị (đăng thông báo, check dữ liệu…) — thoát quyền chủ thì bấm nút Thoát, không cần đăng xuất tài khoản.</div>'
+      + '<input class="adm-input" id="admCode" type="password" inputmode="numeric" placeholder="Nhập mã chủ…" style="margin-top:11px">'
+      + '<div class="adm-err" id="admErr"></div>'
+      + '<button class="adm-big" id="admGo">👑 Vào quyền chủ</button>';
+    const go = () => {
+      if (document.getElementById("admCode").value.trim() === ADMIN_CODE) {
+        isAdmin = true;
+        try { localStorage.setItem("tvbm-admin", "1"); } catch(e) {}
+        syncAdminUI(); renderAdmin();
+      } else document.getElementById("admErr").textContent = "Sai mã rồi 😅 Thử lại nhé.";
+    };
+    document.getElementById("admGo").addEventListener("click", go);
+    document.getElementById("admCode").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
     return;
   }
   const bm = DATA["bam-may"], kn = DATA["kinh-nghiem"];
@@ -681,7 +701,7 @@ function renderAdmin(){
     + '<div class="adm-note" id="ntNote"></div>'
     + '<button class="adm-big" id="ntPost">📣 Đăng thông báo</button>'
     + '<div class="adm-links"><a target="_blank" rel="noopener" href="' + SHEET_URL + '">📗 Mở bảng Sheet</a><a target="_blank" rel="noopener" href="' + ((bm.recommend && bm.recommend.url) || '#') + '">📂 Mở kho Drive</a></div>'
-    + '<button class="adm-big" id="admOut" style="background:#1a2436;color:#c3d2e6;border:1.5px solid #54677f">🚪 Đăng xuất tài khoản chủ</button>';
+    + '<button class="adm-big" id="admOut" style="background:#1a2436;color:#c3d2e6;border:1.5px solid #54677f">🔒 Thoát quyền chủ (vẫn giữ đăng nhập)</button>';
   document.getElementById("ntPost").addEventListener("click", async () => {
     const t = document.getElementById("ntTitle").value.trim();
     const b = document.getElementById("ntBody").value.trim();
@@ -693,7 +713,7 @@ function renderAdmin(){
       document.getElementById("ntTitle").value = ""; document.getElementById("ntBody").value = "";
     } catch(e) { note.textContent = "Đăng chưa được, thử lại nhé 😅"; note.style.color = "#f0a3a3"; }
   });
-  document.getElementById("admOut").addEventListener("click", adminLogout);
+  document.getElementById("admOut").addEventListener("click", lockAdmin);
 }
 
 /* ===== HO SO CA NHAN (ban thu) ===== */
@@ -935,7 +955,7 @@ function startCloudSync(){
   window.__db.collection("announcements").orderBy("createdAt", "desc").limit(50).onSnapshot(snap => {
     notifs = snap.docs.map(d => { const x = d.data(); const dt = x.createdAt && x.createdAt.toDate ? x.createdAt.toDate() : null; return {id: d.id, t: x.t || "", b: x.b || "", at: dt ? (String(dt.getDate()).padStart(2, "0") + "/" + String(dt.getMonth() + 1).padStart(2, "0") + "/" + dt.getFullYear()) : "vừa xong"}; });
     renderBell();
-    if (isAdmin && snap.empty && !window.__seeded) { window.__seeded = true; seedAnnouncements(); }
+    if (isOwner && snap.empty && !window.__seeded) { window.__seeded = true; seedAnnouncements(); }
   }, () => {});
 }
 document.getElementById("pfOut").addEventListener("click", () => adminLogout());
@@ -950,7 +970,10 @@ function initCloud(){
     if (!user) { gate(signinHTML()); wireSignin(); return; }
     window.__uid = user.uid;
     window.__email = user.email || "";
-    isAdmin = (window.__email.toLowerCase() === OWNER_EMAIL);
+    isOwner = (window.__email.toLowerCase() === OWNER_EMAIL);
+    let unlocked = false;
+    try { unlocked = localStorage.getItem("tvbm-admin") === "1"; } catch(e) {}
+    isAdmin = isOwner && unlocked;
     syncAdminUI();
     let token = null;
     try { token = sessionStorage.getItem("tvbm-gtoken"); } catch(e) {}
