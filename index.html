@@ -769,16 +769,36 @@ const firebaseConfig = { apiKey: "AIzaSyBAyMWdWWYySvGGsGORFZrTj4aM6oj6cpE", auth
 const SHEET_ID = "1SHM7OTLAe69pg3IqEv6kISUf2wvk7CdUV9h9LBpkrZo";
 const OWNER_EMAIL = "thaonguyenvg19@gmail.com";
 const GIS_CLIENT_ID = "1053830682519-qghvj4nia8g2j49pb10vtuh567mk74bd.apps.googleusercontent.com";
-function trySilentToken(){
+function saveTokenCache(tok){
+  try { localStorage.setItem("tvbm-gtoken-cache", JSON.stringify({t: tok, exp: Date.now() + 50*60*1000})); } catch(e) {}
+}
+function readTokenCache(){
+  try {
+    const c = JSON.parse(localStorage.getItem("tvbm-gtoken-cache") || "null");
+    if (c && c.t && c.exp > Date.now() + 60000) return c.t;
+  } catch(e) {}
+  return null;
+}
+function waitForGIS(ms){
   return new Promise((resolve) => {
-    if (GIS_CLIENT_ID.indexOf("__") === 0 || !window.google || !google.accounts || !google.accounts.oauth2) { resolve(null); return; }
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      if (window.google && google.accounts && google.accounts.oauth2) { clearInterval(iv); resolve(true); }
+      else if (Date.now() - t0 > ms) { clearInterval(iv); resolve(false); }
+    }, 150);
+  });
+}
+async function trySilentToken(){
+  const ready = await waitForGIS(3500);
+  return new Promise((resolve) => {
+    if (GIS_CLIENT_ID.indexOf("__") === 0 || !ready) { resolve(null); return; }
     let done = false;
     const finish = (v) => { if (!done) { done = true; resolve(v); } };
     try {
       const client = google.accounts.oauth2.initTokenClient({
         client_id: GIS_CLIENT_ID,
         scope: "https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.readonly",
-        callback: (resp) => { if (resp && resp.access_token) { try { sessionStorage.setItem("tvbm-gtoken", resp.access_token); } catch(e) {} finish(resp.access_token); } else finish(null); },
+        callback: (resp) => { if (resp && resp.access_token) { try { sessionStorage.setItem("tvbm-gtoken", resp.access_token); } catch(e) {} saveTokenCache(resp.access_token); finish(resp.access_token); } else finish(null); },
         error_callback: () => finish(null)
       });
       client.requestAccessToken({prompt: "", hint: window.__email || ""});
@@ -821,7 +841,7 @@ async function doSignIn(){
     provider.setCustomParameters({prompt: "consent"});
     const res = await firebase.auth().signInWithPopup(provider);
     const tok = res.credential && res.credential.accessToken;
-    if (tok) { try { sessionStorage.setItem("tvbm-gtoken", tok); } catch(e) {} proceedWithToken(tok); }
+    if (tok) { try { sessionStorage.setItem("tvbm-gtoken", tok); } catch(e) {} saveTokenCache(tok); proceedWithToken(tok); }
   } catch(e) { gate(errorHTML("Đăng nhập chưa thành công — mã lỗi: " + ((e && e.code) || "không rõ") + ". Chụp màn hình này gửi tôi để tôi sửa đúng chỗ nhé.")); wireSignin(); }
 }
 function cellVal(c){ return (c && c.formattedValue) || ""; }
@@ -934,6 +954,7 @@ function initCloud(){
     syncAdminUI();
     let token = null;
     try { token = sessionStorage.getItem("tvbm-gtoken"); } catch(e) {}
+    if (!token) token = readTokenCache();
     if (token) { proceedWithToken(token); return; }
     gate(loadingHTML());
     const silent = await trySilentToken();
