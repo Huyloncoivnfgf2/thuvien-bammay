@@ -802,7 +802,7 @@ async function doSignIn(){
     const res = await firebase.auth().signInWithPopup(provider);
     const tok = res.credential && res.credential.accessToken;
     if (tok) { try { sessionStorage.setItem("tvbm-gtoken", tok); } catch(e) {} proceedWithToken(tok); }
-  } catch(e) { gate(errorHTML("Đăng nhập chưa thành công, thử lại nhé.")); wireSignin(); }
+  } catch(e) { gate(errorHTML("Đăng nhập chưa thành công — mã lỗi: " + ((e && e.code) || "không rõ") + ". Chụp màn hình này gửi tôi để tôi sửa đúng chỗ nhé.")); wireSignin(); }
 }
 function cellVal(c){ return (c && c.formattedValue) || ""; }
 function cellLink(c){
