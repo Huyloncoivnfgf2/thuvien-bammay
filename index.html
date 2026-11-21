@@ -259,6 +259,7 @@
 <main><div class="wrap"><div id="adminStrip"></div><div id="blocks"></div><div id="gridwrap"></div></div></main>
 <footer>Tick “đã học / đã xem” được lưu trên chính máy này 📱💻<br>Bản chính thức sẽ có đăng nhập Google xịn xò 🔐 — chỉ ai được chia sẻ trên Drive mới xem được, và tự cập nhật khi bạn sửa bảng.</footer>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
@@ -767,6 +768,24 @@ renderBell(); syncAdminUI();
 const firebaseConfig = { apiKey: "AIzaSyBAyMWdWWYySvGGsGORFZrTj4aM6oj6cpE", authDomain: "giupaedonv1.firebaseapp.com", projectId: "giupaedonv1", storageBucket: "giupaedonv1.firebasestorage.app", messagingSenderId: "1053830682519", appId: "1:1053830682519:web:4a1ceada98de52d8c956d2" };
 const SHEET_ID = "1SHM7OTLAe69pg3IqEv6kISUf2wvk7CdUV9h9LBpkrZo";
 const OWNER_EMAIL = "thaonguyenvg19@gmail.com";
+const GIS_CLIENT_ID = "__GIS_CLIENT_ID__";
+function trySilentToken(){
+  return new Promise((resolve) => {
+    if (GIS_CLIENT_ID.indexOf("__") === 0 || !window.google || !google.accounts || !google.accounts.oauth2) { resolve(null); return; }
+    let done = false;
+    const finish = (v) => { if (!done) { done = true; resolve(v); } };
+    try {
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: GIS_CLIENT_ID,
+        scope: "https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.readonly",
+        callback: (resp) => { if (resp && resp.access_token) { try { sessionStorage.setItem("tvbm-gtoken", resp.access_token); } catch(e) {} finish(resp.access_token); } else finish(null); },
+        error_callback: () => finish(null)
+      });
+      client.requestAccessToken({prompt: "", hint: window.__email || ""});
+      setTimeout(() => finish(null), 6000);
+    } catch(e) { finish(null); }
+  });
+}
 function isImgAvatar(v){ return /^(data:|https?:|blob:)/.test(v || ""); }
 function gate(html){ const g = document.getElementById("gate"); g.style.display = "flex"; document.getElementById("gateBody").innerHTML = html; }
 function ungate(){ document.getElementById("gate").style.display = "none"; }
@@ -903,10 +922,11 @@ document.getElementById("pfOut").addEventListener("click", () => adminLogout());
 function initCloud(){
   if (firebaseConfig.apiKey.indexOf("__") === 0) { gate('<div class="gate-emoji">🔧</div><div class="gate-title">Web đang chờ gắn khóa truy cập</div><div class="gate-note">Chủ web đang hoàn thiện bước cuối — quay lại sau ít phút nhé!</div>'); return; }
   try { firebase.initializeApp(firebaseConfig); } catch(e) {}
+  firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
   window.__db = firebase.firestore();
   try { window.__storage = firebase.storage(); } catch(e) {}
   gate(loadingHTML());
-  firebase.auth().onAuthStateChanged((user) => {
+  firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) { gate(signinHTML()); wireSignin(); return; }
     window.__uid = user.uid;
     window.__email = user.email || "";
@@ -914,8 +934,11 @@ function initCloud(){
     syncAdminUI();
     let token = null;
     try { token = sessionStorage.getItem("tvbm-gtoken"); } catch(e) {}
-    if (!token) { gate(needTokenHTML()); wireSignin(); return; }
-    proceedWithToken(token);
+    if (token) { proceedWithToken(token); return; }
+    gate(loadingHTML());
+    const silent = await trySilentToken();
+    if (silent) { proceedWithToken(silent); return; }
+    gate(needTokenHTML()); wireSignin();
   });
 }
 initCloud();
