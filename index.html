@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thư viện Video Bấm Máy</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background:#0c1220; color:#eef3fa; font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust:100%; }
+  header { position: sticky; top:0; z-index:10; background:#111a2b; border-bottom:1px solid #2a3852; padding:14px 16px 12px; }
+  .wrap { max-width: 1060px; margin: 0 auto; }
+  h1 { font-size: 23px; font-weight: 800; }
+  .sub { color:#93a7c2; font-size: 13px; margin-top: 3px; }
+  #search { width:100%; margin-top:12px; background:#0a0f1a; border:1px solid #2a3852; border-radius:14px; color:#eef3fa; padding:12px 14px; font-size:16px; outline:none; }
+  #search:focus { border-color:#3a8bfd; }
+  .tabs { display:flex; gap:9px; margin-top:12px; }
+  .tab { flex:1; text-align:center; padding:13px 8px; border-radius:16px; border:1.5px solid #2a3852; background:#182238; color:#c3d2e6; font-size:18.5px; font-weight:800; letter-spacing:.3px; cursor:pointer; transition: transform .12s; }
+  .tab:active { transform: scale(.97) rotate(-.5deg); }
+  .tab[data-sec="bam-may"].active { background:linear-gradient(135deg,#3f8cff,#2456a6); border-color:#7db4ff; color:#fff; box-shadow:0 6px 18px rgba(63,140,255,.35); }
+  .tab[data-sec="kinh-nghiem"].active { background:linear-gradient(135deg,#c05cff,#6d3fd4); border-color:#d29bff; color:#fff; box-shadow:0 6px 18px rgba(176,92,255,.35); }
+  .progress { margin-top:13px; }
+  .progress .lbl { font-size:13.5px; color:#93a7c2; display:flex; justify-content:space-between; }
+  .bar { height:10px; background:#0a0f1a; border:1px solid #2a3852; border-radius:99px; overflow:hidden; margin-top:5px; }
+  .bar > div { height:100%; background:linear-gradient(90deg,#2f9e57,#3ecf72); width:0%; transition: width .25s; }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .chip { padding:7px 13px; border-radius:99px; border:1px solid #2a3852; background:#182238; color:#c3d2e6; font-size:13.5px; cursor:pointer; }
+  .chip.active { background:#eef3fa; color:#0c1220; border-color:#eef3fa; font-weight:700; }
+  main { padding: 16px; }
+  .blocks-row { display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:14px; align-items:start; }
+  @media (max-width: 860px) { .blocks-row { grid-template-columns: 1fr; } }
+  .blocks-row.single { grid-template-columns: 1fr; }
+  .featured { background:linear-gradient(180deg,#2e230e,#251c0b); border:1.5px solid #b98a26; border-radius:20px; padding:16px; }
+  .featured .tag { display:inline-block; background:#b98a26; color:#171106; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:99px; }
+  .featured .ftext { font-size:17.5px; font-weight:700; color:#ffd97a; line-height:1.45; margin:10px 0 13px; }
+  .featured .btn.video { background:linear-gradient(180deg,#ffc93f,#f0a81c); color:#241a02; border:none; cursor:pointer; font-family:inherit; }
+  .featured .btn.de { background:transparent; border:1.5px solid #b98a26; color:#ffd97a; }
+  .recommend { background:linear-gradient(180deg,#12291a,#0f2317); border:1.5px solid #2f8a52; border-radius:20px; padding:16px; }
+  .recommend .tag { display:inline-block; background:#2f8a52; color:#eafff2; font-size:12px; font-weight:800; letter-spacing:.5px; padding:4px 10px; border-radius:99px; }
+  .recommend .ftext { font-size:17.5px; font-weight:700; color:#8ff0b3; line-height:1.45; margin:10px 0 13px; }
+  .recommend .btn.folder { width:100%; border:none; cursor:pointer; font-family:inherit; background:linear-gradient(180deg,#3ecf72,#2f9e57); color:#06230f; }
+  .folder-list { margin-top:11px; display:flex; flex-direction:column; gap:7px; max-height:340px; overflow-y:auto; }
+  .vrow { display:flex; align-items:center; gap:11px; width:100%; text-align:left; background:#0e2016; border:1px solid #265c3a; color:#d9f5e3; padding:9px 11px; border-radius:12px; font-size:15px; cursor:pointer; font-family:inherit; }
+  .vrow.playing { background:#1d4d2e; border-color:#3ecf72; }
+  .vrow.watched { opacity:.75; }
+  .vnum { flex:none; width:27px; height:27px; border-radius:50%; background:#2f8a52; color:#fff; font-weight:700; font-size:13.5px; display:flex; align-items:center; justify-content:center; }
+  .vname { flex:1; font-weight:600; }
+  .vsize { color:#8fb89d; font-size:13px; }
+  .vchk { flex:none; width:24px; height:24px; border:2px solid #8fb89d; border-radius:7px; display:flex; align-items:center; justify-content:center; background:transparent; }
+  .vrow.watched .vchk { background:#3ecf72; border-color:#3ecf72; }
+  .folder-ext { display:inline-block; margin-top:11px; color:#8ff0b3; font-size:13.5px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap:14px; margin-top:6px; }
+  @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+  .card { position:relative; background:linear-gradient(180deg,#1c2739,#17202f); border:1px solid #2e3f5e; border-radius:22px; padding:20px; display:flex; flex-direction:column; gap:14px; box-shadow: 0 8px 22px rgba(0,0,0,.28); transition: transform .15s; }
+  .card:hover { transform: translateY(-2px); }
+  .card.learned { border-color:#2f8a52; }
+  .card.empty { opacity:.55; box-shadow:none; }
+  .top { display:flex; align-items:center; gap:14px; }
+  .stt { flex:none; width:58px; height:58px; border-radius:50%; background:linear-gradient(180deg,#3f8cff,#2b6fe0); color:#fff; font-weight:800; font-size:26px; display:flex; align-items:center; justify-content:center; box-shadow: 0 4px 14px rgba(47,125,246,.45); }
+  .card.learned .stt { background:linear-gradient(180deg,#3ecf72,#2f9e57); box-shadow: 0 4px 14px rgba(62,207,114,.35); }
+  .vdiv { flex:none; width:2px; height:44px; background:#33455f; border-radius:2px; }
+  .title { font-size:27px; font-weight:800; letter-spacing:.2px; }
+  .badge { position:absolute; top:16px; right:16px; background:#5c2233; color:#ff9db4; border:1px solid #a03a54; font-size:11px; font-weight:700; padding:4px 9px; border-radius:99px; letter-spacing:.4px; }
+  .notepill { align-self:flex-start; display:inline-flex; align-items:center; gap:9px; background:#3a2c12; color:#f7bc45; font-size:16px; font-weight:600; padding:9px 16px; border-radius:99px; }
+  .btns { display:flex; gap:12px; }
+  .btn { flex:1; display:flex; align-items:center; justify-content:center; gap:9px; text-decoration:none; height:56px; border-radius:16px; font-size:19px; font-weight:700; }
+  button.btn { border:none; cursor:pointer; font-family:inherit; }
+  button.btn:active { transform: scale(.98); }
+  .btn.video { background:linear-gradient(180deg,#3f8cff,#2b6fe0); color:#fff; }
+  .btn.de { background:#131a29; border:1.5px solid #54677f; color:#dbe5f2; }
+  .nolink { color:#7c8ea9; font-size:14px; font-style:italic; }
+  .hr { height:1px; background:#2c3c58; margin-top:2px; }
+  .learn { margin-top:auto; width:100%; display:flex; align-items:center; justify-content:center; gap:12px; background:transparent; border:none; padding:8px 4px 2px; color:#aebdd2; font-size:18px; font-weight:600; cursor:pointer; font-family:inherit; }
+  .learn.small { font-size:16px; margin-top:4px; }
+  .box { flex:none; width:25px; height:25px; border:2px solid #8fa3bd; border-radius:7px; display:flex; align-items:center; justify-content:center; }
+  .learn.on { color:#7fe0a8; }
+  .learn.on .box { background:#3ecf72; border-color:#3ecf72; }
+  .emptyline { color:#93a7c2; font-size:15.5px; text-align:center; padding:26px 10px 8px; line-height:1.6; }
+  footer { color:#5f7189; font-size:12.5px; text-align:center; padding: 8px 16px 30px; line-height:1.6; }
+  #splash { position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center; background:rgba(4,7,13,.9); padding:20px; }
+  .splash-card { max-width:640px; width:100%; background:linear-gradient(180deg,#3a1414,#2a0f0f); border:2.5px solid #e05252; border-radius:22px; padding:34px 28px 26px; text-align:center; box-shadow:0 0 60px rgba(224,82,82,.45); animation: pulse 1s ease-in-out infinite alternate; }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.015); } }
+  .splash-ico { font-size:64px; line-height:1; }
+  .splash-text { margin-top:16px; font-size:27px; font-weight:800; line-height:1.5; color:#ffd97a; text-transform:uppercase; }
+  .splash-sub { margin-top:10px; color:#f0a3a3; font-size:15px; }
+  @media (max-width: 480px) { .splash-text { font-size:22px; } }
+  .splash-bar { height:6px; background:rgba(255,255,255,.15); border-radius:99px; margin-top:24px; overflow:hidden; }
+  .splash-bar > div { height:100%; width:100%; background:#e05252; }
+  #watchroom { position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center; background:rgba(4,7,13,.93); padding:14px; overflow-y:auto; }
+  .wr-card { width:100%; max-width:900px; background:#141d2e; border:1.5px solid #3a8bfd; border-radius:22px; padding:16px; box-shadow:0 18px 50px rgba(0,0,0,.5); max-height:calc(100dvh - 28px); overflow-y:auto; margin:auto; }
+  .wr-head { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .wr-title { flex:1; font-size:19px; font-weight:800; line-height:1.35; }
+  #wrClose { flex:none; width:42px; height:42px; border-radius:50%; border:1.5px solid #54677f; background:#0d1420; color:#eef3fa; font-size:18px; cursor:pointer; }
+  .wr-player { position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; overflow:hidden; }
+  .wr-player iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  .wr-foot { margin-top:8px; display:flex; justify-content:center; }
+
+  .btn, .chip, .learn, .vrow, #wrClose, .qa-mini, #qaSend { transition: transform .1s ease; }
+  .btn:active, .chip:active, .learn:active, .vrow:active, #wrClose:active, .qa-mini:active, #qaSend:active { transform: scale(.95); }
+  #splash { overflow-y:auto; }
+  .splash-card { max-height: calc(100dvh - 40px); overflow-y:auto; }
+  #wrQA { margin-top:6px; }
+  .qa-title { font-size:17px; font-weight:800; margin:10px 0 9px; }
+  #qaText { width:100%; background:#0a0f1a; border:1px solid #2a3852; border-radius:12px; color:#eef3fa; padding:11px 12px; font-size:15px; font-family:inherit; resize:vertical; outline:none; }
+  #qaText:focus { border-color:#3a8bfd; }
+  .qa-row { display:flex; gap:8px; flex-wrap:wrap; margin-top:9px; align-items:center; }
+  #qaTs { flex:1; min-width:150px; background:#0a0f1a; border:1px solid #2a3852; border-radius:10px; color:#eef3fa; padding:9px 11px; font-size:14px; outline:none; font-family:inherit; }
+  .qa-mini { background:#1a2436; border:1px solid #3a4a61; color:#c3d2e6; padding:9px 12px; border-radius:10px; font-size:14px; cursor:pointer; font-family:inherit; }
+  .qa-note { color:#7c8ea9; font-size:12.5px; margin-top:7px; }
+  #qaThumbs { display:flex; gap:7px; flex-wrap:wrap; margin-top:7px; }
+  #qaThumbs img { width:56px; height:56px; object-fit:cover; border-radius:9px; border:1px solid #3a4a61; }
+  #qaSend { margin-top:11px; width:100%; background:linear-gradient(180deg,#3f8cff,#2b6fe0); color:#fff; border:none; padding:13px; border-radius:12px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .qa-item { background:#101827; border:1px solid #2a3852; border-radius:12px; padding:11px 12px; margin-top:9px; text-align:left; }
+  .qa-head { display:flex; gap:8px; align-items:center; font-size:13px; color:#93a7c2; flex-wrap:wrap; }
+  .qa-ts { background:#33270f; border:1px solid #8a6d2f; color:#f2cd7e; border-radius:99px; padding:2px 9px; font-size:12.5px; font-weight:700; cursor:pointer; }
+  .qa-body { margin-top:6px; font-size:15px; line-height:1.5; white-space:pre-wrap; }
+  .qa-imgs { margin-top:5px; color:#7c8ea9; font-size:12.5px; }
+  @media (orientation: landscape) and (max-height: 540px) {
+    .wr-card { max-width: min(880px, calc((100dvh - 165px) * 16 / 9)); }
+    .wr-title { font-size:16px; }
+    .splash-ico { font-size:38px; }
+    .splash-text { font-size:19px; margin-top:8px; }
+    .splash-card { padding:18px 20px 14px; }
+  }
+
+  .wr-fallback { text-align:center; margin-top:9px; }
+  .wr-fallback a { color:#8fc2f8; font-size:13.5px; }
+
+  .headrow { display:flex; align-items:flex-start; gap:10px; }
+  .headtitle { flex:1; min-width:0; }
+  .iconbtn { position:relative; flex:none; width:46px; height:46px; border-radius:50%; border:1.5px solid #3a4a61; background:#182238; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition: transform .1s; }
+  .iconbtn:active { transform: scale(.92); }
+  .iconbtn.admin-on { border-color:#f0a81c; background:#2e230e; box-shadow:0 0 12px rgba(240,168,28,.4); }
+  #bellBadge { position:absolute; top:-4px; right:-4px; min-width:20px; height:20px; border-radius:99px; background:#e05252; color:#fff; font-size:11.5px; font-weight:800; display:none; align-items:center; justify-content:center; padding:0 5px; }
+  #bellPanel { position:fixed; top:74px; right:12px; z-index:80; width:min(370px, calc(100vw - 24px)); max-height:62vh; overflow-y:auto; background:#141d2e; border:1.5px solid #3a8bfd; border-radius:16px; box-shadow:0 16px 44px rgba(0,0,0,.55); padding:13px; }
+  .bell-head { font-size:16.5px; font-weight:800; margin-bottom:9px; }
+  .notif { background:#101827; border:1px solid #2a3852; border-radius:12px; padding:10px 12px; margin-bottom:8px; }
+  .notif .nt { font-size:14.5px; font-weight:700; line-height:1.4; }
+  .notif .nb { font-size:13.5px; color:#c3d2e6; line-height:1.5; margin-top:3px; }
+  .notif .ntime { font-size:11.5px; color:#7c8ea9; margin-top:5px; }
+  .bell-empty { color:#7c8ea9; font-size:14px; text-align:center; padding:14px 0; }
+  #adminStrip { display:none; background:linear-gradient(180deg,#2e230e,#251c0b); border:1.5px solid #b98a26; color:#ffd97a; border-radius:14px; padding:10px 12px; margin-bottom:14px; font-size:14px; align-items:center; gap:8px; flex-wrap:wrap; }
+  #adminStrip .as-btn { background:#b98a26; color:#171106; border:none; font-weight:700; padding:7px 12px; border-radius:99px; cursor:pointer; font-family:inherit; font-size:13.5px; }
+  #adminStrip .as-btn.ghost { background:transparent; border:1.5px solid #b98a26; color:#ffd97a; }
+  #adminModal { position:fixed; inset:0; z-index:95; display:none; align-items:center; justify-content:center; background:rgba(4,7,13,.93); padding:14px; overflow-y:auto; }
+  .adm-card { width:100%; max-width:520px; background:#141d2e; border:1.5px solid #f0a81c; border-radius:22px; padding:16px; box-shadow:0 18px 50px rgba(0,0,0,.5); margin:auto; }
+  #admClose { flex:none; width:42px; height:42px; border-radius:50%; border:1.5px solid #54677f; background:#0d1420; color:#eef3fa; font-size:18px; cursor:pointer; }
+  .adm-input { width:100%; background:#0a0f1a; border:1px solid #2a3852; border-radius:12px; color:#eef3fa; padding:12px; font-size:16px; outline:none; font-family:inherit; }
+  .adm-input:focus { border-color:#f0a81c; }
+  .adm-text { width:100%; background:#0a0f1a; border:1px solid #2a3852; border-radius:12px; color:#eef3fa; padding:11px 12px; font-size:15px; font-family:inherit; resize:vertical; outline:none; margin-top:9px; }
+  .adm-big { width:100%; margin-top:11px; background:linear-gradient(180deg,#ffc93f,#f0a81c); color:#241a02; border:none; padding:13px; border-radius:12px; font-size:16px; font-weight:800; cursor:pointer; font-family:inherit; }
+  .adm-info { background:#101827; border:1px solid #2a3852; border-radius:12px; padding:11px 12px; font-size:14px; line-height:1.7; color:#c3d2e6; }
+  .adm-err { color:#f0a3a3; font-size:13.5px; margin-top:8px; min-height:18px; }
+  .adm-note { color:#7fe0a8; font-size:13.5px; margin-top:8px; }
+  .adm-links { display:flex; gap:8px; margin-top:11px; }
+  .adm-links a { flex:1; text-align:center; text-decoration:none; background:#1a2436; border:1px solid #3a4a61; color:#c3d2e6; padding:10px; border-radius:11px; font-size:14px; font-weight:600; }
+
+  .qa-ava { font-size:16px; }
+  .qa-owner { background:#b98a26; color:#171106; font-size:11px; font-weight:800; padding:2px 7px; border-radius:99px; }
+  .qa-reps { margin-top:8px; display:flex; flex-direction:column; gap:7px; }
+  .qa-rep { background:#0c1424; border:1px solid #22304a; border-radius:10px; padding:8px 10px; }
+  .qa-repbtn { margin-top:9px; background:transparent; border:1px solid #3a4a61; color:#8fc2f8; padding:6px 12px; border-radius:99px; font-size:13px; cursor:pointer; font-family:inherit; }
+  .qa-repbox { margin-top:8px; }
+  .qa-reptext { width:100%; background:#0a0f1a; border:1px solid #2a3852; border-radius:10px; color:#eef3fa; padding:9px 11px; font-size:14.5px; font-family:inherit; resize:vertical; outline:none; }
+  .qa-send2 { margin-top:7px; background:linear-gradient(180deg,#3f8cff,#2b6fe0); color:#fff; border:none; padding:9px 14px; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; font-family:inherit; }
+  #profileModal { position:fixed; inset:0; z-index:95; display:none; align-items:center; justify-content:center; background:rgba(4,7,13,.93); padding:14px; overflow-y:auto; }
+  #pfClose { flex:none; width:42px; height:42px; border-radius:50%; border:1.5px solid #54677f; background:#0d1420; color:#eef3fa; font-size:18px; cursor:pointer; }
+  .ava-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-top:9px; }
+  .ava-grid button { font-size:26px; padding:9px 0; background:#101827; border:2px solid #2a3852; border-radius:12px; cursor:pointer; }
+  .ava-grid button.sel { border-color:#f0a81c; background:#2e230e; }
+
+  .pf-preview { width:74px; height:74px; border-radius:50%; background:#101827; border:2.5px solid #3a8bfd; display:flex; align-items:center; justify-content:center; font-size:38px; overflow:hidden; margin:6px auto 2px; }
+  .pf-preview img { width:100%; height:100%; object-fit:cover; }
+  .qa-ava-img { width:22px; height:22px; border-radius:50%; object-fit:cover; vertical-align:-4px; }
+  .pf-uprow { display:flex; gap:8px; justify-content:center; margin-top:11px; flex-wrap:wrap; }
+
+  #gate { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; background:#0b1120; padding:18px; overflow-y:auto; }
+  .gate-card { width:100%; max-width:430px; text-align:center; background:#141d2e; border:1.5px solid #2a3852; border-radius:22px; padding:28px 22px; box-shadow:0 18px 50px rgba(0,0,0,.5); margin:auto; }
+  .gate-emoji { font-size:52px; }
+  .gate-title { font-size:21px; font-weight:800; margin-top:10px; line-height:1.35; }
+  .gate-note { color:#93a7c2; font-size:14.5px; line-height:1.6; margin-top:9px; }
+  .gate-btn { margin-top:18px; display:inline-flex; align-items:center; gap:10px; background:#fff; color:#1c2733; border:none; padding:13px 22px; border-radius:99px; font-size:16px; font-weight:700; cursor:pointer; font-family:inherit; box-shadow:0 6px 18px rgba(0,0,0,.35); }
+  .gate-btn:active { transform: scale(.96); }
+  .gate-btn.ghost { background:transparent; color:#c3d2e6; border:1.5px solid #54677f; box-shadow:none; }
+  .qa-imgs img { width:64px; height:64px; object-fit:cover; border-radius:9px; margin:3px 3px 0 0; }
+  #adminBtn { display:none; }
+</style>
+</head>
+<body>
+<div id="gate"><div class="gate-card" id="gateBody"></div></div>
+<div id="splash"><div class="splash-card"><div class="splash-ico">⚠️</div><div class="splash-text" id="splashText"></div><div class="splash-sub">Đọc cho kỹ vào nhé! 👀</div><div class="splash-bar"><div id="splashFill"></div></div></div></div>
+<div id="watchroom"><div class="wr-card">
+  <div class="wr-head"><div class="wr-title" id="wrTitle"></div><button id="wrClose" title="Đóng">✕</button></div>
+  <div class="wr-player" id="wrPlayer"></div>
+  <div class="wr-fallback"><a id="wrExt" target="_blank" rel="noopener" style="display:none">↗ Nếu video không phát được, bấm mở ở trang gốc</a></div><div class="wr-foot"><button class="learn" id="wrTick" style="margin-top:0"><span class="box"></span><span id="wrTickLbl"></span></button></div>
+  <div id="wrQA" style="display:none">
+    <div class="hr"></div>
+    <div class="qa-title">💬 Hỏi đáp về video này</div>
+    <textarea id="qaText" rows="3" placeholder="Bạn đang thắc mắc điều gì ở bài học này? Hãy mô tả cụ thể để giáo viên hỗ trợ nhanh nhất..."></textarea>
+    <div class="qa-row">
+      <input id="qaTs" placeholder="⏱ Hỏi tại phút:giây (vd 36:10)">
+      <button class="qa-mini" id="qaMath">∑ Math</button>
+      <label class="qa-mini" for="qaImgs">🖼 Đính kèm ảnh</label>
+      <input type="file" id="qaImgs" accept="image/*" multiple hidden>
+    </div>
+    <div class="qa-note" id="qaImgNote">Tối đa 5 ảnh, mỗi ảnh không quá 4MB</div>
+    <div id="qaThumbs"></div>
+    <button id="qaSend">📩 Gửi câu hỏi</button>
+    <div id="qaList"></div>
+  </div>
+</div></div>
+
+<div id="bellPanel" style="display:none"><div class="bell-head">🔔 Thông báo</div><div id="bellList"></div></div>
+
+<div id="profileModal"><div class="adm-card" style="border-color:#3a8bfd">
+  <div class="wr-head"><div class="wr-title">🧑 Hồ sơ của bạn 🎨</div><button id="pfClose" title="Đóng">✕</button></div>
+  <div style="color:#93a7c2;font-size:14px;line-height:1.55">Tên và avatar này sẽ hiện cạnh câu hỏi / câu trả lời của bạn. Đổi lúc nào cũng được!</div>
+  <div class="pf-preview" id="pfPreview">👤</div>
+  <div class="pf-uprow">
+    <label class="qa-mini" for="pfFile">📷 Tải ảnh từ điện thoại</label>
+    <input type="file" id="pfFile" accept="image/*" hidden>
+    <button class="qa-mini" id="pfRemove" style="display:none">🗑 Xoá ảnh</button>
+  </div>
+  <input class="adm-input" id="pfName" placeholder="Tên hiển thị (vd: Thảo, Minh Anh…)" style="margin-top:11px">
+  <div style="font-weight:700;margin-top:13px">Chọn avatar:</div>
+  <div class="ava-grid" id="avaGrid"></div>
+  <button class="adm-big" id="pfSave" style="background:linear-gradient(180deg,#3f8cff,#2b6fe0);color:#fff">💾 Lưu hồ sơ</button>
+  <div id="pfEmail" style="color:#7c8ea9;font-size:13px;margin-top:11px"></div>
+  <button class="adm-big" id="pfOut" style="background:#1a2436;color:#c3d2e6;border:1.5px solid #54677f">🚪 Đăng xuất</button>
+</div></div>
+<div id="adminModal"><div class="adm-card">
+  <div class="wr-head"><div class="wr-title">🔑 Khu vực của chủ 👑</div><button id="admClose" title="Đóng">✕</button></div>
+  <div id="admBody"></div>
+</div></div>
+<header>
+  <div class="wrap">
+    <div class="headrow"><div class="headtitle"><h1>📚 Thư viện Video Bấm Máy 🎉</h1>
+    <div class="sub">Đọc trực tiếp từ bảng của chủ — luôn mới nhất ✨</div></div>
+    <button class="iconbtn" id="profileBtn" title="Hồ sơ của bạn">👤</button>
+    <button class="iconbtn" id="bellBtn" title="Thông báo">🔔<span id="bellBadge"></span></button>
+    <button class="iconbtn" id="adminBtn" title="Khu vực của chủ">🔑</button></div>
+    <input id="search" type="search" placeholder="🔍 Tìm bài số mấy? Gõ vào đây nè…">
+    <div class="tabs">
+      <div class="tab active" data-sec="bam-may">⌨️ Bấm máy 🎯</div>
+      <div class="tab" data-sec="kinh-nghiem">🧠 Kinh nghiệm làm bài 🚀</div>
+    </div>
+    <div class="progress">
+      <div class="lbl"><span id="progText">🏆 Đã học 0/0 bài</span><span id="progPct">0%</span></div>
+      <div class="bar"><div id="progBar"></div></div>
+    </div>
+    <div class="chips">
+      <div class="chip active" data-f="all">📚 Tất cả</div>
+      <div class="chip" data-f="todo">🌱 Chưa học</div>
+      <div class="chip" data-f="done">✅ Đã học</div>
+      <div class="chip" data-f="new">🔥 Mới (NEW)</div>
+      <div class="chip" data-f="empty">👀 Hiện cả bài chưa có link</div>
+    </div>
+  </div>
+</header>
+<main><div class="wrap"><div id="adminStrip"></div><div id="blocks"></div><div id="gridwrap"></div></div></main>
+<footer>Tick “đã học / đã xem” được lưu trên chính máy này 📱💻<br>Bản chính thức sẽ có đăng nhập Google xịn xò 🔐 — chỉ ai được chia sẻ trên Drive mới xem được, và tự cập nhật khi bạn sửa bảng.</footer>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script>
+let DATA = {"bam-may": {"items": [], "featured": null, "recommend": null, "warning": "", "notices": []}, "kinh-nghiem": {"items": [], "featured": null, "recommend": null, "warning": "", "notices": []}};
+const NAMES = {"bam-may":"Bấm máy","kinh-nghiem":"Kinh nghiệm làm các dạng bài"};
+const ICO_PLAY = '<svg width="21" height="21" viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5z" fill="#fff"/></svg>';
+const ICO_DOC = '<svg width="21" height="21" viewBox="0 0 24 24" fill="none"><path d="M6 2.5h8L19 7.5v14H6z" fill="#dbe5f2"/><path d="M14 2.5v5h5" fill="#9fb2c9"/><path d="M8.8 12.5h6.4M8.8 15.8h6.4" stroke="#5a6c85" stroke-width="1.6" stroke-linecap="round"/></svg>';
+const ICO_WARN = '<svg width="21" height="21" viewBox="0 0 24 24"><path d="M12 3.2 22 20H2z" fill="#f7bc45"/><rect x="11.05" y="9.5" width="1.9" height="5.6" rx="0.9" fill="#3a2c12"/><circle cx="12" cy="17.3" r="1.15" fill="#3a2c12"/></svg>';
+const ICO_CHECK = '<svg width="15" height="15" viewBox="0 0 24 24"><path d="M4.5 12.5 10 18 19.5 6.5" stroke="#0c1220" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICO_CHECK_S = '<svg width="13" height="13" viewBox="0 0 24 24"><path d="M4.5 12.5 10 18 19.5 6.5" stroke="#06230f" stroke-width="3.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+let sec = "bam-may", filter = "all", showEmpty = false, query = "";
+let progress = {}, watched = {};
+let cloudSaveT = null;
+function cloudSave(){ if (!window.__udoc) return; clearTimeout(cloudSaveT); cloudSaveT = setTimeout(() => { window.__udoc.set({progress: progress, watched: watched}, {merge: true}).catch(() => {}); }, 350); }
+function saveP(){ cloudSave(); }
+function saveW(){ cloudSave(); }
+function key(s, stt){ return s + ":" + stt; }
+function hasContent(it){ return it.video || it.de; }
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+function ytId(url){ const m = (url||"").match(/[?&]v=([^&]+)/); return m ? m[1] : null; }
+function ytEmbed(url){ return "https://www.youtube.com/embed/" + ytId(url) + "?rel=0&autoplay=1"; }
+
+/* ===== PHONG XEM VIDEO RIENG ===== */
+let wrCtx = null;
+function wrState(){
+  if (!wrCtx) return false;
+  if (wrCtx.type === "card") return !!progress[key(wrCtx.sec, wrCtx.stt)];
+  if (wrCtx.type === "feat") return !!watched["F:" + wrCtx.sec];
+  return !!watched["V:" + wrCtx.vid];
+}
+function wrTickUI(){
+  const on = wrState();
+  const btn = document.getElementById("wrTick");
+  btn.classList.toggle("on", on);
+  btn.querySelector(".box").innerHTML = on ? ICO_CHECK : "";
+  document.getElementById("wrTickLbl").textContent = !wrCtx ? "" :
+    (wrCtx.type === "card" ? (on ? "Đã học bài này ✅" : "Đánh dấu đã học") : (on ? "Đã xem video này ✅" : "Đánh dấu đã xem"));
+}
+function openWatch(title, embedUrl, ctx, extUrl){
+  wrCtx = ctx;
+  document.getElementById("wrTitle").textContent = title;
+  document.getElementById("wrPlayer").innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+  wrTickUI();
+  const qaEl = document.getElementById("wrQA");
+  const showQA = !!wrCtx;
+  qaEl.style.display = showQA ? "block" : "none";
+  if (showQA) { subscribeQA(wrCtx.vkey); renderQA(); }
+  const ext = document.getElementById("wrExt");
+  if (extUrl) { ext.href = extUrl; ext.style.display = "inline"; } else { ext.style.display = "none"; }
+  document.getElementById("watchroom").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+function closeWatch(){
+  document.getElementById("watchroom").style.display = "none";
+  document.getElementById("wrPlayer").innerHTML = "";
+  document.body.style.overflow = "";
+  wrCtx = null;
+}
+document.getElementById("wrClose").addEventListener("click", closeWatch);
+document.getElementById("watchroom").addEventListener("click", (e) => { if (e.target.id === "watchroom") closeWatch(); });
+document.getElementById("wrTick").addEventListener("click", () => {
+  if (!wrCtx) return;
+  if (wrCtx.type === "card") {
+    const k = key(wrCtx.sec, wrCtx.stt);
+    if (progress[k]) delete progress[k]; else progress[k] = true;
+    saveP(); renderGrid();
+  } else if (wrCtx.type === "feat") {
+    const k = "F:" + wrCtx.sec;
+    if (watched[k]) delete watched[k]; else watched[k] = true;
+    saveW(); syncFeatLearn();
+  } else {
+    const k = "V:" + wrCtx.vid;
+    if (watched[k]) delete watched[k]; else watched[k] = true;
+    saveW(); syncFolderRow(wrCtx.vid);
+  }
+  wrTickUI();
+});
+function syncFeatLearn(){
+  const fl = document.getElementById("featLearn");
+  if (!fl) return;
+  const on = !!watched["F:" + sec];
+  fl.classList.toggle("on", on);
+  fl.querySelector(".box").innerHTML = on ? ICO_CHECK : "";
+  fl.querySelector(".lbl").textContent = on ? "Đã xem video này" : "Đánh dấu đã xem";
+}
+function syncFolderRow(vid){
+  const row = document.querySelector('.vrow[data-vid="' + vid + '"]');
+  if (!row) return;
+  const on = !!watched["V:" + vid];
+  row.classList.toggle("watched", on);
+  row.querySelector(".vchk").innerHTML = on ? ICO_CHECK_S : "";
+}
+
+
+/* ===== HOI DAP (ban thu: luu tren may nguoi xem) ===== */
+let qaCache = {};
+const qaImgFetching = new Set();
+let qaUnsub = null, qaSubKey = "";
+function subscribeQA(vkey){
+  if (!window.__db || qaSubKey === vkey) { if (wrCtx) renderQA(); return; }
+  if (qaUnsub) qaUnsub();
+  qaSubKey = vkey;
+  qaUnsub = window.__db.collection("questions").where("videoKey", "==", vkey).orderBy("createdAt", "asc").onSnapshot(snap => {
+    qaCache[vkey] = snap.docs.map(d => Object.assign({id: d.id}, d.data()));
+    for (const q of qaCache[vkey]) {
+      if (q.imgCount && !q.imgsFetched && !qaImgFetching.has(q.id)) {
+        qaImgFetching.add(q.id);
+        window.__db.collection("qimages").where("qid", "==", q.id).get().then(s2 => {
+          const arr = s2.docs.map(d => d.data());
+          arr.sort((a, b) => (a.idx || 0) - (b.idx || 0));
+          q.imgs = arr.map(x => x.data);
+          q.imgsFetched = true;
+          if (wrCtx && wrCtx.vkey === vkey) renderQA();
+        }).catch(() => {});
+      }
+    }
+    if (wrCtx && wrCtx.vkey === vkey) renderQA();
+  }, () => {});
+}
+let qaFiles = [];
+function fileToDataURL(file){
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 1000;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement("canvas");
+      cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+      cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      resolve(cv.toDataURL("image/jpeg", 0.72));
+    };
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+function avaHTML(a){
+  if (!a) return '<span class="qa-ava">🙂</span>';
+  if (isImgAvatar(a.avatar)) return '<img class="qa-ava-img" src="' + a.avatar + '">';
+  if (a.avatar === "custom" && isImgAvatar(profile.avatar)) return '<img class="qa-ava-img" src="' + profile.avatar + '">';
+  return '<span class="qa-ava">' + (a.avatar || "🙂") + '</span>';
+}
+function authorHTML(a, owner){
+  a = a || {};
+  return avaHTML(a) + '<b>' + esc(a.name || "Bạn") + '</b>' + (owner ? '<span class="qa-owner">👑 Chủ</span>' : '');
+}
+function renderQA(){
+  const list = document.getElementById("qaList");
+  const qs = (wrCtx && qaCache[wrCtx.vkey]) || [];
+  list.innerHTML = qs.map((q, qi) => {
+    const reps = (q.replies || []).map(r => '<div class="qa-rep"><div class="qa-head">' + authorHTML(r.author, r.owner) + '<span>' + esc(r.when || '') + '</span></div><div class="qa-body">' + esc(r.text) + '</div></div>').join('');
+    return '<div class="qa-item"><div class="qa-head">' + authorHTML(q.author, q.owner) + (q.ts ? '<span class="qa-ts" data-tsec="' + q.tsec + '">⏱ ' + esc(q.ts) + '</span>' : '') + '<span>' + esc(q.when || '') + '</span></div>'
+      + '<div class="qa-body">' + esc(q.text) + '</div>'
+      + (q.imgs && q.imgs.length ? '<div class="qa-imgs">' + q.imgs.map(u => '<a target="_blank" rel="noopener" href="' + esc(u) + '"><img src="' + esc(u) + '"></a>').join('') + '</div>' : '')
+      + '<div class="qa-reps">' + reps + '</div>'
+      + '<button class="qa-repbtn" data-qi="' + qi + '">💬 Trả lời</button>'
+      + '<div class="qa-repbox" id="repbox-' + qi + '" style="display:none"><textarea class="qa-reptext" id="reptext-' + qi + '" rows="2" placeholder="Viết câu trả lời của bạn…"></textarea><button class="qa-send2" data-send="' + qi + '">📩 Gửi trả lời</button></div>'
+      + '</div>';
+  }).join('');
+  list.querySelectorAll(".qa-ts").forEach(ch => ch.addEventListener("click", () => {
+    const s = +ch.getAttribute("data-tsec");
+    if (wrCtx && wrCtx.yt) document.getElementById("wrPlayer").innerHTML = '<iframe src="https://www.youtube.com/embed/' + wrCtx.yt + '?rel=0&start=' + s + '&autoplay=1" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+  }));
+  list.querySelectorAll(".qa-repbtn").forEach(b => b.addEventListener("click", () => {
+    const bx = document.getElementById("repbox-" + b.getAttribute("data-qi"));
+    bx.style.display = bx.style.display === "none" ? "block" : "none";
+  }));
+  list.querySelectorAll("[data-send]").forEach(b => b.addEventListener("click", async () => {
+    const qi = +b.getAttribute("data-send");
+    const text = document.getElementById("reptext-" + qi).value.trim();
+    if (!text || !wrCtx || !window.__db) return;
+    const q = (qaCache[wrCtx.vkey] || [])[qi];
+    if (!q || !q.id) return;
+    const rep2 = {author: myProfile(), owner: isAdmin, text: text, when: "vừa xong"};
+    try { await window.__db.collection("questions").doc(q.id).update({replies: firebase.firestore.FieldValue.arrayUnion(rep2)}); } catch(e) {}
+  }));
+}
+document.getElementById("qaSend").addEventListener("click", async () => {
+  if (!wrCtx || !window.__db) return;
+  const note = document.getElementById("qaImgNote");
+  const text = document.getElementById("qaText").value.trim();
+  if (!text) { note.textContent = "Bạn chưa viết câu hỏi kìa ✍️"; note.style.color = "#f0a3a3"; return; }
+  const tsRaw = document.getElementById("qaTs").value.trim();
+  let tsec = 0;
+  if (tsRaw) {
+    const parts = tsRaw.split(":").map(Number);
+    if (parts.some(isNaN) || !parts.length) { note.textContent = "Mốc thời gian chưa đúng định dạng phút:giây (vd 36:10)"; note.style.color = "#f0a3a3"; return; }
+    tsec = parts.reduce((a,b) => a*60 + b, 0);
+  }
+  note.textContent = "Đang gửi câu hỏi… ⏳"; note.style.color = "#7c8ea9";
+  try {
+    const qref = await window.__db.collection("questions").add({videoKey: wrCtx.vkey, uid: window.__uid, author: myProfile(), owner: isAdmin, text: text, ts: tsRaw, tsec: tsec, imgs: [], imgCount: qaFiles.length, when: "vừa xong", replies: [], createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+    for (let i = 0; i < qaFiles.length; i++) {
+      const durl = await fileToDataURL(qaFiles[i]);
+      if (durl) await window.__db.collection("qimages").add({qid: qref.id, idx: i, data: durl, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+    }
+    document.getElementById("qaText").value = ""; document.getElementById("qaTs").value = "";
+    qaFiles = []; document.getElementById("qaThumbs").innerHTML = ""; document.getElementById("qaImgs").value = "";
+    note.textContent = "Đã gửi câu hỏi ✅ Mọi người sẽ thấy và trả lời được ngay!"; note.style.color = "#7fe0a8";
+  } catch(e) { note.textContent = "Gửi chưa được, thử lại nhé 😅"; note.style.color = "#f0a3a3"; }
+});
+document.getElementById("qaImgs").addEventListener("change", (e) => {
+  const note = document.getElementById("qaImgNote");
+  let files = Array.from(e.target.files || []);
+  if (files.length > 5) { note.textContent = "Tối đa 5 ảnh thôi nhé!"; note.style.color = "#f0a3a3"; files = files.slice(0, 5); }
+  const big = files.filter(f => f.size > 4*1024*1024);
+  if (big.length) { note.textContent = "Có ảnh quá 4MB: " + big.map(f => f.name).join(", "); note.style.color = "#f0a3a3"; files = files.filter(f => f.size <= 4*1024*1024); }
+  else if (files.length) { note.textContent = "Đã chọn " + files.length + " ảnh 📸"; note.style.color = "#7c8ea9"; }
+  qaFiles = files;
+  document.getElementById("qaThumbs").innerHTML = files.map(f => '<img src="' + URL.createObjectURL(f) + '">').join('');
+});
+document.getElementById("qaMath").addEventListener("click", () => {
+  const ta = document.getElementById("qaText");
+  const s = ta.selectionStart, en = ta.selectionEnd;
+  const sel = ta.value.slice(s, en) || "x^2";
+  ta.value = ta.value.slice(0, s) + "$" + sel + "$" + ta.value.slice(en);
+  ta.focus();
+});
+
+/* ===== HAI KHOI DAI (QUAN TRONG / NEN XEM) ===== */
+function renderBlocks(){
+  const wrap = document.getElementById("blocks");
+  const F = DATA[sec].featured, R = DATA[sec].recommend;
+  const hasF = !!F, hasR = !!R;
+  if (!hasF && !hasR) { wrap.innerHTML = ""; return; }
+  let html = '<div class="blocks-row' + ((hasF && hasR) ? '' : ' single') + '">';
+  if (hasF) {
+    const fw = !!watched["F:" + sec];
+    html += '<div class="featured"><span class="tag">⭐ QUAN TRỌNG — XEM ĐẦU TIÊN ⭐</span><div class="ftext">' + esc(F.text) + '</div><div class="btns">';
+    if (F.video) html += '<button class="btn video" id="featWatch">▶ Xem video</button>';
+    if (F.de) html += '<a class="btn de" target="_blank" rel="noopener" href="' + F.de + '">' + ICO_DOC + 'Xem đề</a>';
+    html += '</div>'
+      + '<button class="learn small' + (fw ? ' on' : '') + '" id="featLearn"><span class="box">' + (fw ? ICO_CHECK : '') + '</span><span class="lbl">' + (fw ? 'Đã xem video này' : 'Đánh dấu đã xem') + '</span></button></div>';
+  }
+  if (hasR) {
+    html += '<div class="recommend"><span class="tag">⭐ NÊN XEM ⭐</span><div class="ftext">' + esc(R.text) + '</div>'
+      + '<button class="btn folder" id="folderToggle">📂 Mở kho ' + (R.videos||[]).length + ' video</button>'
+      + '<div id="folderPanel" style="display:none">'
+      + '<div class="folder-list">' + (R.videos||[]).map((v,i) => {
+          const w = !!watched["V:" + v.id];
+          return '<div class="vrow' + (w ? ' watched' : '') + '" data-vid="' + v.id + '"><span class="vnum">' + (i+1) + '</span><span class="vname">Video ' + (i+1) + '</span><span class="vsize">' + (v.size/1048576).toFixed(1) + ' MB</span><span class="vchk">' + (w ? ICO_CHECK_S : '') + '</span></div>';
+        }).join('') + '</div>'
+      + '<a class="folder-ext" target="_blank" rel="noopener" href="' + R.url + '">Mở thư mục trên Google Drive ↗</a>'
+      + '</div></div>';
+  }
+  html += '</div>';
+  wrap.innerHTML = html;
+  const fw2 = document.getElementById("featWatch");
+  if (fw2) fw2.addEventListener("click", () => openWatch("⭐ Video quan trọng — xem đầu tiên nè!", ytEmbed(F.video), {type:"feat", sec:sec, vkey:"feat:" + sec, yt: ytId(F.video)}, F.video));
+  const fl = document.getElementById("featLearn");
+  if (fl) fl.addEventListener("click", () => {
+    const k = "F:" + sec;
+    if (watched[k]) delete watched[k]; else watched[k] = true;
+    saveW(); syncFeatLearn();
+  });
+  const gt = document.getElementById("folderToggle");
+  if (gt) gt.addEventListener("click", () => {
+    const pn = document.getElementById("folderPanel");
+    const open = pn.style.display !== "none";
+    pn.style.display = open ? "none" : "block";
+    gt.textContent = open ? "📂 Mở kho " + (R.videos||[]).length + " video" : "📂 Ẩn danh sách video";
+  });
+  wrap.querySelectorAll(".vrow").forEach((row, idx) => {
+    row.addEventListener("click", () => {
+      wrap.querySelectorAll(".vrow").forEach(x => x.classList.remove("playing"));
+      row.classList.add("playing");
+      openWatch("🎬 Video " + (idx+1) + " — kho Nên xem", "https://drive.google.com/file/d/" + row.getAttribute("data-vid") + "/preview", {type:"folder", sec:sec, vid: row.getAttribute("data-vid"), vkey:"folder:" + row.getAttribute("data-vid"), yt: null}, "https://drive.google.com/file/d/" + row.getAttribute("data-vid") + "/view");
+    });
+    row.querySelector(".vchk").addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      const vid = row.getAttribute("data-vid");
+      const k = "V:" + vid;
+      if (watched[k]) delete watched[k]; else watched[k] = true;
+      saveW(); syncFolderRow(vid);
+    });
+  });
+}
+
+/* ===== DANH SACH BAI ===== */
+function renderGrid(){
+  const box = document.getElementById("gridwrap");
+  const items = DATA[sec].items;
+  const withContent = items.filter(hasContent);
+  const doneCount = withContent.filter(it => progress[key(sec,it.stt)]).length;
+  document.getElementById("progText").textContent = "🏆 Đã học " + doneCount + "/" + withContent.length + " bài có link — mục " + NAMES[sec] + (withContent.length && doneCount === withContent.length ? " 🎉 Xong hết rồi, đỉnh quá!" : "");
+  const pct = withContent.length ? Math.round(doneCount*100/withContent.length) : 0;
+  document.getElementById("progPct").textContent = pct + "%";
+  document.getElementById("progBar").style.width = pct + "%";
+  const q = query.trim().toLowerCase();
+  const shown = items.filter(it => {
+    if (!hasContent(it) && !showEmpty && filter !== "empty") return false;
+    if (filter === "todo" && progress[key(sec,it.stt)]) return false;
+    if (filter === "done" && !progress[key(sec,it.stt)]) return false;
+    if (filter === "new" && !it.new) return false;
+    if (q) {
+      const hay = (it.stt + " " + (it.note||"")).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  let html = "";
+  if (!shown.length) html += '<div class="emptyline">' + (withContent.length === 0 ? 'Mục này đang chờ cập nhật video 😴<br>Quay lại sau nhé, hoặc bấm “👀 Hiện cả bài chưa có link” để xem các bài đang chờ.' : 'Ủa, tìm hổng thấy! 🤔<br>Thử gõ số bài xem sao.') + '</div>';
+  html += '<div class="grid">';
+  shown.forEach(it => {
+    const learned = !!progress[key(sec,it.stt)];
+    const empty = !hasContent(it);
+    html += '<div class="card' + (learned ? " learned" : "") + (empty ? " empty" : "") + '">';
+    if (it.new) html += '<div class="badge">🔥 NEW</div>';
+    html += '<div class="top"><div class="stt">' + esc(it.stt) + '</div><div class="vdiv"></div><div class="title">Bài ' + esc(it.stt) + '</div></div>';
+    if (it.note) html += '<div class="notepill">' + ICO_WARN + '<span>' + esc(it.note) + '</span></div>';
+    if (empty) html += '<div class="nolink">Bài này chưa có link — chờ cập nhật trong bảng 😴</div>';
+    else {
+      html += '<div class="btns">';
+      if (it.video) html += '<button class="btn video" data-watch="' + esc(it.stt) + '" data-yt="' + ytId(it.video) + '">🎬 Xem video</button>';
+      if (it.de) html += '<a class="btn de" target="_blank" rel="noopener" href="' + it.de + '">' + ICO_DOC + 'Xem đề</a>';
+      html += '</div><div class="hr"></div>';
+      html += '<button class="learn' + (learned ? " on" : "") + '" data-stt="' + esc(it.stt) + '"><span class="box">' + (learned ? ICO_CHECK : "") + '</span>' + (learned ? "Đã học rồi ✅" : "Đánh dấu đã học") + '</button>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  box.innerHTML = html;
+  box.querySelectorAll("[data-watch]").forEach(b => b.addEventListener("click", () => {
+    openWatch("🎬 Bài " + b.getAttribute("data-watch") + " — " + NAMES[sec], "https://www.youtube.com/embed/" + b.getAttribute("data-yt") + "?rel=0&autoplay=1", {type:"card", sec:sec, stt:b.getAttribute("data-watch"), vkey:"card:" + sec + ":" + b.getAttribute("data-watch"), yt: b.getAttribute("data-yt")}, "https://www.youtube.com/watch?v=" + b.getAttribute("data-yt"));
+  }));
+  box.querySelectorAll(".learn").forEach(b => b.addEventListener("click", () => {
+    const k = key(sec, b.getAttribute("data-stt"));
+    if (progress[k]) delete progress[k]; else progress[k] = true;
+    saveP(); renderGrid();
+  }));
+}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  t.classList.add("active"); sec = t.getAttribute("data-sec"); renderBlocks(); renderGrid();
+}));
+document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
+  const f = c.getAttribute("data-f");
+  if (f === "empty") { showEmpty = !showEmpty; c.classList.toggle("active", showEmpty); }
+  else {
+    filter = f;
+    document.querySelectorAll(".chip").forEach(x => { if (x.getAttribute("data-f") !== "empty") x.classList.toggle("active", x.getAttribute("data-f") === f); });
+  }
+  renderGrid();
+}));
+document.getElementById("search").addEventListener("input", e => { query = e.target.value; renderGrid(); });
+renderBlocks(); renderGrid();
+
+/* ===== CHUONG THONG BAO + CHE DO CHU (ban thu) ===== */
+const ADMIN_CODE = "6868";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/1SHM7OTLAe69pg3IqEv6kISUf2wvk7CdUV9h9LBpkrZo/edit";
+let isAdmin = false;
+let notifs = [], readIds = [];
+function saveNotifs(){ if (window.__udoc) window.__udoc.set({readNotifs: readIds}, {merge: true}).catch(() => {}); }
+function renderBell(){
+  const unread = notifs.filter(n => !readIds.includes(n.id)).length;
+  const badge = document.getElementById("bellBadge");
+  badge.style.display = unread ? "flex" : "none";
+  badge.textContent = unread;
+  document.getElementById("bellList").innerHTML = notifs.length
+    ? notifs.map(n => '<div class="notif"><div class="nt">' + esc(n.t) + '</div><div class="nb">' + esc(n.b) + '</div><div class="ntime">🕐 ' + esc(n.at) + '</div></div>').join('')
+    : '<div class="bell-empty">Chưa có thông báo nào 📭</div>';
+}
+document.getElementById("bellBtn").addEventListener("click", () => {
+  const pn = document.getElementById("bellPanel");
+  const open = pn.style.display !== "none";
+  pn.style.display = open ? "none" : "block";
+  if (!open) { readIds = notifs.map(n => n.id); saveNotifs(); setTimeout(renderBell, 600); renderBellListOnly(); }
+});
+function renderBellListOnly(){ renderBell(); }
+function syncAdminUI(){
+  document.getElementById("adminBtn").textContent = isAdmin ? "👑" : "🔑";
+  document.getElementById("adminBtn").classList.toggle("admin-on", isAdmin);
+  document.getElementById("adminBtn").style.display = isAdmin ? "flex" : "none";
+  const strip = document.getElementById("adminStrip");
+  if (isAdmin) {
+    strip.style.display = "flex";
+    strip.innerHTML = '<span>👑 <b>Chế độ chủ</b> đang bật</span>'
+      + '<button class="as-btn" id="asCompose">📝 Soạn thông báo</button>'
+      + '<a class="as-btn ghost" style="text-decoration:none" target="_blank" rel="noopener" href="' + SHEET_URL + '">📗 Mở bảng Sheet</a>'
+      + '<button class="as-btn ghost" id="asLogout">🚪 Đăng xuất</button>';
+    document.getElementById("asCompose").addEventListener("click", () => openAdmin());
+    document.getElementById("asLogout").addEventListener("click", adminLogout);
+  } else { strip.style.display = "none"; strip.innerHTML = ""; }
+}
+function adminLogout(){
+  try { sessionStorage.removeItem("tvbm-gtoken"); } catch(e) {}
+  if (window.firebase && firebase.auth) firebase.auth().signOut().then(() => location.reload()); else location.reload();
+}
+function openAdmin(){
+  renderAdmin();
+  document.getElementById("adminModal").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+function closeAdmin(){
+  document.getElementById("adminModal").style.display = "none";
+  document.body.style.overflow = "";
+}
+document.getElementById("adminBtn").addEventListener("click", openAdmin);
+document.getElementById("admClose").addEventListener("click", closeAdmin);
+document.getElementById("adminModal").addEventListener("click", (e) => { if (e.target.id === "adminModal") closeAdmin(); });
+function renderAdmin(){
+  const body = document.getElementById("admBody");
+  if (!isAdmin) {
+    body.innerHTML = '<div style="color:#93a7c2;font-size:14.5px;line-height:1.55">Khu vực này chỉ dành cho <b>chủ web</b> 👑 — quyền chủ gắn với tài khoản Google của chủ, tài khoản người học không vào được phần này.</div>';
+    return;
+  }
+  const bm = DATA["bam-may"], kn = DATA["kinh-nghiem"];
+  const cnt = s => s.items.filter(i => i.video || i.de).length;
+  body.innerHTML = '<div class="adm-info">📊 <b>Dữ liệu đang chạy (đọc trực tiếp từ Sheet):</b><br>'
+    + '• Mục Bấm máy: ' + cnt(bm) + ' bài có link, kho Nên xem: ' + ((bm.recommend && bm.recommend.videos) || []).length + ' video<br>'
+    + '• Mục Kinh nghiệm: ' + cnt(kn) + ' bài có link<br>'
+    + '• Khối Quan trọng: ' + (bm.featured ? 'có ✅' : 'không') + ' • Bảng cảnh cáo: ' + (bm.warning ? 'có ✅' : 'không') + '<br>'
+    + '• Web vừa đọc bảng trực tiếp lúc bạn mở trang — sửa trong Sheet là web cập nhật theo.</div>'
+    + '<div style="font-weight:800;margin-top:14px">📝 Đăng thông báo cho mọi người</div>'
+    + '<input class="adm-input" id="ntTitle" placeholder="Tiêu đề thông báo…" style="margin-top:9px">'
+    + '<textarea class="adm-text" id="ntBody" rows="3" placeholder="Nội dung thông báo…"></textarea>'
+    + '<div class="adm-note" id="ntNote"></div>'
+    + '<button class="adm-big" id="ntPost">📣 Đăng thông báo</button>'
+    + '<div class="adm-links"><a target="_blank" rel="noopener" href="' + SHEET_URL + '">📗 Mở bảng Sheet</a><a target="_blank" rel="noopener" href="' + ((bm.recommend && bm.recommend.url) || '#') + '">📂 Mở kho Drive</a></div>'
+    + '<button class="adm-big" id="admOut" style="background:#1a2436;color:#c3d2e6;border:1.5px solid #54677f">🚪 Đăng xuất tài khoản chủ</button>';
+  document.getElementById("ntPost").addEventListener("click", async () => {
+    const t = document.getElementById("ntTitle").value.trim();
+    const b = document.getElementById("ntBody").value.trim();
+    const note = document.getElementById("ntNote");
+    if (!t || !b) { note.textContent = "Điền đủ tiêu đề và nội dung đã nhé ✍️"; note.style.color = "#f0a3a3"; return; }
+    try {
+      await window.__db.collection("announcements").add({t: "👑 " + t, b: b, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+      note.textContent = "Đã đăng ✅ Thông báo sẽ hiện ở chuông 🔔 của mọi người!"; note.style.color = "#7fe0a8";
+      document.getElementById("ntTitle").value = ""; document.getElementById("ntBody").value = "";
+    } catch(e) { note.textContent = "Đăng chưa được, thử lại nhé 😅"; note.style.color = "#f0a3a3"; }
+  });
+  document.getElementById("admOut").addEventListener("click", adminLogout);
+}
+
+/* ===== HO SO CA NHAN (ban thu) ===== */
+let profile = {name: "", avatar: ""};
+try { profile = Object.assign(profile, JSON.parse(localStorage.getItem("tvbm-profile-v1") || "{}")); } catch(e) {}
+profile = {name: "", avatar: ""};
+const AVATARS = ["🦊","🐼","🦁","🐯","🐸","🦄","🐙","🐳","🦉","🐢","🚀","⭐"];
+function myProfile(){ const av = profile.avatar || "🙂"; return {name: profile.name || "Bạn", avatar: av}; }
+function syncProfileBtn(){
+  const btn = document.getElementById("profileBtn");
+  if (isImgAvatar(profile.avatar)) { btn.textContent = ""; btn.style.backgroundImage = "url(" + profile.avatar + ")"; btn.style.backgroundSize = "cover"; btn.style.backgroundPosition = "center"; }
+  else { btn.style.backgroundImage = "none"; btn.textContent = profile.avatar || "👤"; }
+}
+let pfSel = ""; let pfBlob = null;
+function openProfile(){
+  document.getElementById("pfName").value = profile.name || "";
+  document.getElementById("pfEmail").textContent = window.__email ? "📧 Đang đăng nhập: " + window.__email : "";
+  pfSel = profile.avatar || "";
+  document.getElementById("avaGrid").innerHTML = AVATARS.map(a => '<button data-av="' + a + '" class="' + (a === pfSel ? 'sel' : '') + '">' + a + '</button>').join('');
+  document.querySelectorAll("#avaGrid button").forEach(b => b.addEventListener("click", () => {
+    pfSel = b.getAttribute("data-av");
+    document.querySelectorAll("#avaGrid button").forEach(x => x.classList.toggle("sel", x.getAttribute("data-av") === pfSel));
+    pfPreviewUpdate();
+  }));
+  pfPreviewUpdate();
+  document.getElementById("profileModal").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+function closeProfile(){
+  document.getElementById("profileModal").style.display = "none";
+  document.body.style.overflow = "";
+}
+document.getElementById("profileBtn").addEventListener("click", openProfile);
+document.getElementById("pfClose").addEventListener("click", closeProfile);
+document.getElementById("profileModal").addEventListener("click", (e) => { if (e.target.id === "profileModal") closeProfile(); });
+document.getElementById("pfSave").addEventListener("click", async () => {
+  profile.name = document.getElementById("pfName").value.trim();
+  profile.avatar = pfSel;
+  if (window.__udoc) window.__udoc.set({profileName: profile.name, profileAvatar: profile.avatar}, {merge: true}).catch(() => {});
+  syncProfileBtn(); closeProfile();
+});
+
+function pfPreviewUpdate(){
+  const pv = document.getElementById("pfPreview");
+  const rm = document.getElementById("pfRemove");
+  if (isImgAvatar(pfSel)) { pv.innerHTML = '<img src="' + pfSel + '">'; rm.style.display = "inline-block"; }
+  else { pv.innerHTML = pfSel || "👤"; rm.style.display = "none"; }
+}
+document.getElementById("pfRemove").addEventListener("click", () => { pfSel = ""; document.querySelectorAll("#avaGrid button").forEach(x => x.classList.remove("sel")); pfPreviewUpdate(); });
+document.getElementById("pfFile").addEventListener("change", (e) => {
+  const file = (e.target.files || [])[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const max = 256;
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const cv = document.createElement("canvas");
+    cv.width = Math.round(img.width * scale); cv.height = Math.round(img.height * scale);
+    cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    pfSel = cv.toDataURL("image/jpeg", 0.85); document.querySelectorAll("#avaGrid button").forEach(x => x.classList.remove("sel")); pfPreviewUpdate();
+  };
+  img.src = url;
+});
+syncProfileBtn();
+
+renderBell(); syncAdminUI();
+
+
+/* ===== BAN CHINH THUC: DANG NHAP GOOGLE + DOC SHEET TRUC TIEP + DONG BO ===== */
+const firebaseConfig = { apiKey: "AIzaSyBAyMWdWYySvGGsGORFZrTj4aM6oj6cpE", authDomain: "giupaedonv1.firebaseapp.com", projectId: "giupaedonv1", storageBucket: "giupaedonv1.firebasestorage.app", messagingSenderId: "1053830682519", appId: "1:1053830682519:web:4a1ceada98de52d8c956d2" };
+const SHEET_ID = "1SHM7OTLAe69pg3IqEv6kISUf2wvk7CdUV9h9LBpkrZo";
+const OWNER_EMAIL = "thaonguyenvg19@gmail.com";
+function isImgAvatar(v){ return /^(data:|https?:|blob:)/.test(v || ""); }
+function gate(html){ const g = document.getElementById("gate"); g.style.display = "flex"; document.getElementById("gateBody").innerHTML = html; }
+function ungate(){ document.getElementById("gate").style.display = "none"; }
+function gBtn(id, label){ return '<button class="gate-btn" id="' + id + '"><span style="font-size:19px">G</span> ' + label + '</button>'; }
+function signinHTML(){ return '<div class="gate-emoji">📚</div><div class="gate-title">Thư viện Video Bấm Máy</div><div class="gate-note">Đăng nhập bằng Google để vào học.<br>Chỉ tài khoản được chủ chia sẻ bảng mới xem được nội dung nhé!</div>' + gBtn("gSignin", "Đăng nhập bằng Google"); }
+function needTokenHTML(){ return '<div class="gate-emoji">👋</div><div class="gate-title">Xin chào ' + esc(window.__email || "") + '!</div><div class="gate-note">Bấm tiếp tục để cấp quyền đọc bảng và vào thư viện.</div>' + gBtn("gSignin", "Tiếp tục với Google"); }
+function loadingHTML(){ return '<div class="gate-emoji">⏳</div><div class="gate-title">Đang tải thư viện…</div><div class="gate-note">Đang đọc dữ liệu mới nhất từ bảng của chủ.</div>'; }
+function noAccessHTML(){ return '<div class="gate-emoji">🚫</div><div class="gate-title">Tài khoản chưa được cấp quyền</div><div class="gate-note">' + esc(window.__email || "") + ' chưa có trong danh sách được chủ chia sẻ bảng.<br>Nhờ chủ thêm email này vào danh sách chia sẻ của bảng Google Sheet rồi quay lại nhé!</div><br><button class="gate-btn ghost" id="gSignout">🚪 Đăng xuất, đổi tài khoản</button>'; }
+function errorHTML(msg){ return '<div class="gate-emoji">😅</div><div class="gate-title">Có trục trặc nhỏ</div><div class="gate-note">' + esc(msg || "Chưa tải được dữ liệu. Kiểm tra mạng rồi thử lại nhé.") + '</div>' + gBtn("gSignin", "Thử lại"); }
+function wireSignin(){ const b = document.getElementById("gSignin"); if (b) b.addEventListener("click", doSignIn); const o = document.getElementById("gSignout"); if (o) o.addEventListener("click", adminLogout); }
+let proceeding = false, appStarted = false;
+async function proceedWithToken(token){
+  if (proceeding || appStarted) return;
+  proceeding = true;
+  gate(loadingHTML());
+  const ok = await loadSheetData(token);
+  proceeding = false;
+  if (ok === "noaccess") { gate(noAccessHTML()); wireSignin(); return; }
+  if (ok === "expired") { try { sessionStorage.removeItem("tvbm-gtoken"); } catch(e) {} gate(needTokenHTML()); wireSignin(); return; }
+  if (ok !== true) { gate(errorHTML()); wireSignin(); return; }
+  startCloudSync();
+  renderBlocks(); renderGrid(); renderBell(); syncAdminUI(); syncProfileBtn();
+  ungate();
+  appStarted = true;
+  maybeSplash();
+}
+async function doSignIn(){
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.addScope("https://www.googleapis.com/auth/spreadsheets.readonly");
+    provider.addScope("https://www.googleapis.com/auth/drive.readonly");
+    provider.setCustomParameters({prompt: "consent"});
+    const res = await firebase.auth().signInWithPopup(provider);
+    const tok = res.credential && res.credential.accessToken;
+    if (tok) { try { sessionStorage.setItem("tvbm-gtoken", tok); } catch(e) {} proceedWithToken(tok); }
+  } catch(e) { gate(errorHTML("Đăng nhập chưa thành công, thử lại nhé.")); wireSignin(); }
+}
+function cellVal(c){ return (c && c.formattedValue) || ""; }
+function cellLink(c){
+  if (!c) return null;
+  if (c.hyperlink) return c.hyperlink;
+  const runs = c.textFormatRuns || [];
+  for (const r of runs) { const u = r.format && r.format.link && r.format.link.uri; if (u) return u; }
+  const m = (c.formattedValue || "").match(/https?:\/\/[^\s]+/);
+  return m ? m[0] : null;
+}
+function parseSheet(j){
+  const out = {};
+  const map = {"Bấm máy": "bam-may", "Kinh nghiệm làm các dạng bài": "kinh-nghiem"};
+  for (const sh of (j.sheets || [])) {
+    const k = map[sh.properties && sh.properties.title];
+    if (!k) continue;
+    const rows = (((sh.data || [])[0] || {}).rowData) || [];
+    const cell = (r, c) => { const row = rows[r]; return ((row && row.values) || [])[c] || null; };
+    const items = [];
+    for (let r = 2; r < rows.length; r++) {
+      const stt = cellVal(cell(r, 0)).trim();
+      if (!stt) continue;
+      items.push({stt: stt, video: cellLink(cell(r, 1)), de: cellLink(cell(r, 2)), new: /new/i.test(cellVal(cell(r, 3))), note: cellVal(cell(r, 4)).trim(), extras: []});
+    }
+    let featured = null;
+    const fv = cellLink(cell(3, 6)), fd = cellLink(cell(3, 7));
+    if (fv || fd) featured = {text: cellVal(cell(0, 6)).trim(), video: fv, de: fd};
+    let warning = "";
+    for (let r = 0; r < rows.length; r++) { const t = cellVal(cell(r, 6)).trim(); if (/^CHÚ Ý/i.test(t)) { warning = t; break; } }
+    let recommend = null;
+    for (let r = 0; r < rows.length && !recommend; r++) {
+      for (const c of [6, 7]) {
+        const u = cellLink(cell(r, c));
+        if (u && /drive\.google\.com\/drive\/folders\//.test(u)) { recommend = {text: cellVal(cell(r, 6)).trim() || "Nên xem cái này nhé", url: u, videos: []}; break; }
+      }
+    }
+    out[k] = {items: items, featured: featured, recommend: recommend, warning: warning, notices: []};
+  }
+  return out;
+}
+async function listFolder(token, folderId){
+  const q = encodeURIComponent("'" + folderId + "' in parents and trashed = false");
+  const res = await fetch("https://www.googleapis.com/drive/v3/files?q=" + q + "&fields=files(id,name,mimeType,size)&orderBy=modifiedTime&pageSize=200", {headers: {Authorization: "Bearer " + token}});
+  if (!res.ok) return [];
+  const j = await res.json();
+  return (j.files || []).filter(f => (f.mimeType || "").indexOf("video/") === 0 || /\.mp4$/i.test(f.name || "")).map(f => ({id: f.id, name: f.name, size: +(f.size || 0)}));
+}
+async function loadSheetData(token){
+  let res;
+  try {
+    const fields = encodeURIComponent("sheets(properties.title,data(rowData(values(formattedValue,hyperlink,textFormatRuns))))");
+    res = await fetch("https://sheets.googleapis.com/v4/spreadsheets/" + SHEET_ID + "?includeGridData=true&fields=" + fields, {headers: {Authorization: "Bearer " + token}});
+  } catch(e) { return "error"; }
+  if (res.status === 403) return "noaccess";
+  if (res.status === 401) return "expired";
+  if (!res.ok) return "error";
+  const j = await res.json();
+  const parsed = parseSheet(j);
+  if (parsed["bam-may"]) DATA["bam-may"] = parsed["bam-may"];
+  if (parsed["kinh-nghiem"]) DATA["kinh-nghiem"] = parsed["kinh-nghiem"];
+  for (const k of ["bam-may", "kinh-nghiem"]) {
+    const rec = DATA[k].recommend;
+    if (rec && rec.url) {
+      const m = rec.url.match(/folders\/([\w-]+)/);
+      if (m) { try { rec.videos = await listFolder(token, m[1]); } catch(e) { rec.videos = []; } }
+    }
+  }
+  return true;
+}
+function seedAnnouncements(){
+  const col = window.__db.collection("announcements");
+  col.add({t: "🎉 Chào mừng bạn đến Thư viện Video Bấm Máy!", b: "Chọn bài, xem video ngay trên web và tick đã học để theo dõi tiến độ của mình nhé.", createdAt: firebase.firestore.FieldValue.serverTimestamp()}).catch(() => {});
+  col.add({t: "⭐ Nhớ xem video quan trọng đầu tiên nhé!", b: "Khối vàng trên cùng mục Bấm máy là video cần xem lại trước khi vào các video khác.", createdAt: firebase.firestore.FieldValue.serverTimestamp()}).catch(() => {});
+}
+function startCloudSync(){
+  window.__udoc = window.__db.collection("users").doc(window.__uid);
+  window.__udoc.onSnapshot(doc => {
+    if (!doc.exists) return;
+    const d = doc.data();
+    if (d.progress) progress = d.progress;
+    if (d.watched) watched = d.watched;
+    if (Array.isArray(d.readNotifs)) readIds = d.readNotifs;
+    if (d.profileName !== undefined || d.profileAvatar !== undefined) { profile = {name: d.profileName || "", avatar: d.profileAvatar || ""}; syncProfileBtn(); }
+    if (appStarted) { renderGrid(); renderBlocks(); renderBell(); }
+  }, () => {});
+  window.__db.collection("announcements").orderBy("createdAt", "desc").limit(50).onSnapshot(snap => {
+    notifs = snap.docs.map(d => { const x = d.data(); const dt = x.createdAt && x.createdAt.toDate ? x.createdAt.toDate() : null; return {id: d.id, t: x.t || "", b: x.b || "", at: dt ? (String(dt.getDate()).padStart(2, "0") + "/" + String(dt.getMonth() + 1).padStart(2, "0") + "/" + dt.getFullYear()) : "vừa xong"}; });
+    renderBell();
+    if (isAdmin && snap.empty && !window.__seeded) { window.__seeded = true; seedAnnouncements(); }
+  }, () => {});
+}
+document.getElementById("pfOut").addEventListener("click", () => adminLogout());
+function initCloud(){
+  if (firebaseConfig.apiKey.indexOf("__") === 0) { gate('<div class="gate-emoji">🔧</div><div class="gate-title">Web đang chờ gắn khóa truy cập</div><div class="gate-note">Chủ web đang hoàn thiện bước cuối — quay lại sau ít phút nhé!</div>'); return; }
+  try { firebase.initializeApp(firebaseConfig); } catch(e) {}
+  window.__db = firebase.firestore();
+  try { window.__storage = firebase.storage(); } catch(e) {}
+  gate(loadingHTML());
+  firebase.auth().onAuthStateChanged((user) => {
+    if (!user) { gate(signinHTML()); wireSignin(); return; }
+    window.__uid = user.uid;
+    window.__email = user.email || "";
+    isAdmin = (window.__email.toLowerCase() === OWNER_EMAIL);
+    syncAdminUI();
+    let token = null;
+    try { token = sessionStorage.getItem("tvbm-gtoken"); } catch(e) {}
+    if (!token) { gate(needTokenHTML()); wireSignin(); return; }
+    proceedWithToken(token);
+  });
+}
+initCloud();
+
+function maybeSplash(){
+  const warn = (DATA["bam-may"] && DATA["bam-may"].warning) || "";
+  if (!warn) return;
+  let last = 0;
+  try { last = +localStorage.getItem("tvbm-warn-last") || 0; } catch(e) {}
+  if (Date.now() - last < 24*3600*1000) return;
+  try { localStorage.setItem("tvbm-warn-last", String(Date.now())); } catch(e) {}
+  document.getElementById("splashText").textContent = warn;
+  const sp = document.getElementById("splash");
+  sp.style.display = "flex";
+  document.body.style.overflow = "hidden";
+  const fill = document.getElementById("splashFill");
+  requestAnimationFrame(() => { fill.style.transition = "width 5s linear"; fill.style.width = "0%"; });
+  setTimeout(() => { sp.style.display = "none"; document.body.style.overflow = ""; }, 5000);
+}
+</script>
+</body>
+</html>
