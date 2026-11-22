@@ -729,16 +729,31 @@ const ADMIN_CODE = "6868";
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/1SHM7OTLAe69pg3IqEv6kISUf2wvk7CdUV9h9LBpkrZo/edit";
 let isAdmin = false;
 let isOwner = false;
-let notifs = [], readIds = [];
+let notifs = [], readIds = [], dismissedIds = [];
+try { dismissedIds = JSON.parse(localStorage.getItem("tvbm-dismissed-v1") || "[]"); } catch(e) {}
 function saveNotifs(){ if (window.__udoc) window.__udoc.set({readNotifs: readIds}, {merge: true}).catch(() => {}); }
+function saveDismissed(){
+  try { localStorage.setItem("tvbm-dismissed-v1", JSON.stringify(dismissedIds)); } catch(e) {}
+  if (window.__udoc) window.__udoc.set({dismissedNotifs: dismissedIds}, {merge: true}).catch(() => {});
+}
 function renderBell(){
-  const unread = notifs.filter(n => !readIds.includes(n.id)).length;
+  const visible = notifs.filter(n => !dismissedIds.includes(n.id));
+  const unread = visible.filter(n => !readIds.includes(n.id)).length;
   const badge = document.getElementById("bellBadge");
   badge.style.display = unread ? "flex" : "none";
   badge.textContent = unread;
-  document.getElementById("bellList").innerHTML = notifs.length
-    ? notifs.map(n => '<div class="notif"><div class="nt">' + esc(n.t) + '</div><div class="nb">' + esc(n.b) + '</div><div class="ntime">🕐 ' + esc(n.at) + '</div></div>').join('')
-    : '<div class="bell-empty">Chưa có thông báo nào 📭</div>';
+  const listEl = document.getElementById("bellList");
+  listEl.innerHTML = visible.length
+    ? visible.map(n => '<div class="notif" style="position:relative"><button data-dismiss="' + n.id + '" title="Tắt thông báo này" style="position:absolute;top:7px;right:7px;width:24px;height:24px;border-radius:50%;border:1px solid #54677f;background:#1a2436;color:#c3d2e6;cursor:pointer;font-size:12px;line-height:1;padding:0">✕</button><div class="nt" style="padding-right:28px">' + esc(n.t) + '</div><div class="nb">' + esc(n.b) + '</div><div class="ntime">🕐 ' + esc(n.at) + '</div></div>').join('')
+    : (notifs.length ? '<div class="bell-empty">Đã tắt hết thông báo 🎉 Hộp thư gọn gàng!</div>' : '<div class="bell-empty">Chưa có thông báo nào 📭</div>');
+  listEl.querySelectorAll("[data-dismiss]").forEach(b => b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const id = b.getAttribute("data-dismiss");
+    if (!dismissedIds.includes(id)) dismissedIds.push(id);
+    if (!readIds.includes(id)) { readIds.push(id); saveNotifs(); }
+    saveDismissed();
+    renderBell();
+  }));
 }
 document.getElementById("bellBtn").addEventListener("click", () => {
   const pn = document.getElementById("bellPanel");
@@ -1226,6 +1241,7 @@ function startCloudSync(){
     if (d.progress) progress = d.progress;
     if (d.watched) watched = d.watched;
     if (Array.isArray(d.readNotifs)) readIds = d.readNotifs;
+    if (Array.isArray(d.dismissedNotifs)) { dismissedIds = d.dismissedNotifs; try { localStorage.setItem("tvbm-dismissed-v1", JSON.stringify(dismissedIds)); } catch(e) {} }
     if (d.profileName !== undefined || d.profileAvatar !== undefined) { profile = {name: d.profileName || "", avatar: d.profileAvatar || ""}; syncProfileBtn(); }
     if (appStarted) { renderGrid(); renderBlocks(); renderBell(); }
   }, () => {});
