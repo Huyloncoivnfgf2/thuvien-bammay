@@ -341,6 +341,45 @@ function dlDe(u){
 }
 document.getElementById("docClose").addEventListener("click", closeDoc);
 document.getElementById("docDl").addEventListener("click", () => { if (docUrl) dlDe(docUrl); });
+function celebrate(el){
+  if (!el || !el.getBoundingClientRect) return;
+  const r = el.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const layer = document.createElement("div");
+  layer.style.cssText = "position:fixed;left:0;top:0;z-index:300;pointer-events:none";
+  document.body.appendChild(layer);
+  const colors = ["#ffd94d", "#3a8bfd", "#ff7ab6", "#51e6a8", "#c39bff", "#ff9f43"];
+  const glyphs = ["●", "★", "✦"];
+  const emojis = ["🎉", "✨", "🎊"];
+  for (let burst = 0; burst < 3; burst++) {
+    setTimeout(() => {
+      for (let i = 0; i < 14; i++) {
+        const s = document.createElement("span");
+        const isEmoji = Math.random() < 0.2;
+        s.textContent = isEmoji ? emojis[Math.floor(Math.random() * emojis.length)] : glyphs[Math.floor(Math.random() * glyphs.length)];
+        const size = isEmoji ? 17 : 10 + Math.random() * 9;
+        s.style.cssText = "position:fixed;left:" + cx + "px;top:" + cy + "px;font-size:" + size + "px;color:" + colors[Math.floor(Math.random() * colors.length)] + ";pointer-events:none;line-height:1";
+        layer.appendChild(s);
+        const ang = Math.random() * Math.PI * 2;
+        const dist = 60 + Math.random() * Math.max(r.width, r.height) * 0.8;
+        const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist - 36;
+        const rot = Math.random() * 260 - 130;
+        const anim = s.animate([
+          {transform: "translate(-50%,-50%) scale(.6) rotate(0deg)", opacity: 1},
+          {transform: "translate(calc(-50% + " + (dx * 0.75) + "px), calc(-50% + " + (dy * 0.75) + "px)) scale(1.15) rotate(" + rot * 0.6 + "deg)", opacity: 1, offset: 0.55},
+          {transform: "translate(calc(-50% + " + dx + "px), calc(-50% + " + (dy + 76) + "px)) scale(.85) rotate(" + rot + "deg)", opacity: 0}
+        ], {duration: 780 + Math.random() * 340, easing: "cubic-bezier(.17,.67,.35,1)"});
+        anim.onfinish = () => s.remove();
+      }
+    }, burst * 130);
+  }
+  const ring = document.createElement("div");
+  ring.style.cssText = "position:fixed;left:" + r.left + "px;top:" + r.top + "px;width:" + r.width + "px;height:" + r.height + "px;border:3px solid #ffd94d;border-radius:20px;pointer-events:none;box-sizing:border-box";
+  layer.appendChild(ring);
+  const ra = ring.animate([{opacity: .95, transform: "scale(1)"}, {opacity: 0, transform: "scale(1.06)"}], {duration: 550, easing: "ease-out"});
+  ra.onfinish = () => ring.remove();
+  setTimeout(() => layer.remove(), 1900);
+}
 function closeWatch(){
   document.getElementById("watchroom").style.display = "none";
   document.getElementById("wrPlayer").innerHTML = "";
@@ -351,20 +390,25 @@ document.getElementById("wrClose").addEventListener("click", closeWatch);
 document.getElementById("watchroom").addEventListener("click", (e) => { if (e.target.id === "watchroom") closeWatch(); });
 document.getElementById("wrTick").addEventListener("click", () => {
   if (!wrCtx) return;
+  let becoming = false;
   if (wrCtx.type === "card") {
     const k = key(wrCtx.sec, wrCtx.stt);
+    becoming = !progress[k];
     if (progress[k]) delete progress[k]; else progress[k] = true;
     saveP(); renderGrid();
   } else if (wrCtx.type === "feat") {
     const k = "F:" + wrCtx.sec;
+    becoming = !watched[k];
     if (watched[k]) delete watched[k]; else watched[k] = true;
     saveW(); syncFeatLearn();
   } else {
     const k = "V:" + wrCtx.vid;
+    becoming = !watched[k];
     if (watched[k]) delete watched[k]; else watched[k] = true;
     saveW(); syncFolderRow(wrCtx.vid);
   }
   wrTickUI();
+  if (becoming) celebrate(document.querySelector(".wr-box") || document.getElementById("wrTick"));
 });
 function syncFeatLearn(){
   const fl = document.getElementById("featLearn");
@@ -578,8 +622,10 @@ function renderBlocks(){
   const fl = document.getElementById("featLearn");
   if (fl) fl.addEventListener("click", () => {
     const k = "F:" + sec;
+    const becoming = !watched[k];
     if (watched[k]) delete watched[k]; else watched[k] = true;
     saveW(); syncFeatLearn();
+    if (becoming) celebrate(fl.closest(".featured") || fl);
   });
   const gt = document.getElementById("folderToggle");
   if (gt) gt.addEventListener("click", () => {
@@ -654,9 +700,12 @@ function renderGrid(){
   box.querySelectorAll("[data-viewde]").forEach(b => b.addEventListener("click", () => openDoc(b.getAttribute("data-viewde"))));
   box.querySelectorAll("[data-dlde]").forEach(b => b.addEventListener("click", () => dlDe(b.getAttribute("data-dlde"))));
   box.querySelectorAll(".learn").forEach(b => b.addEventListener("click", () => {
-    const k = key(sec, b.getAttribute("data-stt"));
+    const stt = b.getAttribute("data-stt");
+    const k = key(sec, stt);
+    const becoming = !progress[k];
     if (progress[k]) delete progress[k]; else progress[k] = true;
     saveP(); renderGrid();
+    if (becoming) { const nb = box.querySelector('.learn[data-stt="' + stt + '"]'); if (nb) celebrate(nb.closest(".card") || nb); }
   }));
 }
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
