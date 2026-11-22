@@ -91,7 +91,7 @@
   .wr-title { flex:1; font-size:19px; font-weight:800; line-height:1.35; }
   #wrClose { flex:none; width:42px; height:42px; border-radius:50%; border:1.5px solid #54677f; background:#0d1420; color:#eef3fa; font-size:18px; cursor:pointer; }
   .wr-player { position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; overflow:hidden; }
-  .wr-player.portrait { aspect-ratio:auto; height:min(74vh,165vw); max-width:430px; margin-left:auto; margin-right:auto; }
+  .wr-player.portrait { aspect-ratio:auto; height:min(66vh,150vw); max-width:430px; margin-left:auto; margin-right:auto; }
   .wr-player iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
   .wr-foot { margin-top:8px; display:flex; justify-content:center; }
 
@@ -263,7 +263,7 @@
   #ctrlPanel .chips { margin-top: 10px; }
   #wrPlayer video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; }
   #nvBigPlay { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:76px; height:76px; border-radius:50%; border:none; background:rgba(38,110,240,.93); color:#fff; font-size:31px; cursor:pointer; z-index:3; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.5); }
-  #nvBar { display:none; margin-top:10px; background:#131c2e; border:1px solid #2b3f5c; border-radius:14px; padding:10px 12px; }
+  #nvBar { display:none; margin-top:10px; background:#131c2e; border:1px solid #2b3f5c; border-radius:14px; padding:10px 12px; position:sticky; bottom:6px; z-index:5; box-shadow:0 -6px 18px rgba(0,0,0,.35); }
   .nv-row { display:flex; align-items:center; gap:8px; }
   .nv-btn { flex:none; background:#1a2436; border:1.5px solid #3a4a61; color:#e8eef7; border-radius:11px; padding:9px 12px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit; }
   .nv-btn:active { transform:scale(.95); }
@@ -470,8 +470,10 @@ function setupNativePlayer(fid, embedUrl){
     bar.style.display = "none";
     document.getElementById("wrPlayer").innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
   }
+  let metaOk = false;
+  v.addEventListener("loadedmetadata", () => { metaOk = true; });
   v.addEventListener("error", () => {
-    setTimeout(() => { if (v.readyState < 2) fallback(); }, 5000);
+    setTimeout(() => { if (!metaOk) fallback(); }, 10000);
   }, true);
   function syncUI(){
     const playing = !v.paused && !v.ended;
