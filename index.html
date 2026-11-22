@@ -1196,22 +1196,10 @@ function waitForGIS(ms){
   });
 }
 async function trySilentToken(){
-  const ready = await waitForGIS(3500);
-  return new Promise((resolve) => {
-    if (GIS_CLIENT_ID.indexOf("__") === 0 || !ready) { resolve(null); return; }
-    let done = false;
-    const finish = (v) => { if (!done) { done = true; resolve(v); } };
-    try {
-      const client = google.accounts.oauth2.initTokenClient({
-        client_id: GIS_CLIENT_ID,
-        scope: "https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.readonly",
-        callback: (resp) => { if (resp && resp.access_token) { try { sessionStorage.setItem("tvbm-gtoken", resp.access_token); } catch(e) {} saveTokenCache(resp.access_token); finish(resp.access_token); } else finish(null); },
-        error_callback: () => finish(null)
-      });
-      client.requestAccessToken({prompt: "", hint: window.__email || ""});
-      setTimeout(() => finish(null), 6000);
-    } catch(e) { finish(null); }
-  });
+  // KHONG con goi dang nhap ngam Google nua: tren dien thoai no cuop ca tab sang trang loi cua Google.
+  // Chi dung lai token da co san trong phien/bo nho tam; can doc Sheet moi thi chu bam nut xac thuc Google trong bang chu.
+  try { const t = sessionStorage.getItem("tvbm-gtoken"); if (t) return t; } catch(e) {}
+  return readTokenCache();
 }
 function isImgAvatar(v){ return /^(data:|https?:|blob:)/.test(v || ""); }
 function gate(html){ const g = document.getElementById("gate"); g.style.display = "flex"; document.getElementById("gateBody").innerHTML = html; }
