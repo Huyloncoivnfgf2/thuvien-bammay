@@ -199,6 +199,20 @@
   .exam-card .ec-name { font-size:20px; font-weight:900; margin-top:4px; }
   .exam-card .ec-full { font-size:13.5px; opacity:.93; line-height:1.4; }
   .exam-card .ec-dates { font-size:13px; margin-top:8px; background:rgba(0,0,0,.25); border-radius:9px; padding:6px 8px; line-height:1.55; }
+  .eb-logo { position:absolute; right:14px; top:50%; transform:translateY(-50%); width:98px; height:98px; object-fit:contain; background:#fff; border-radius:16px; padding:6px; box-shadow:0 4px 14px rgba(0,0,0,.25); }
+  .exam-board.has-logo .eb-count { padding-right:118px; }
+  .exam-board.has-logo .eb-rounds { margin-right:118px; }
+  .exam-board.has-logo .eb-note { margin-right:118px; }
+  .exam-card { position:relative; }
+  .exam-card .ec-logo { position:absolute; top:12px; right:12px; width:46px; height:46px; object-fit:contain; background:#fff; border-radius:11px; padding:4px; }
+  .exam-card .ec-name { padding-right:56px; }
+  @media (max-width:520px) {
+    .eb-logo { width:72px; height:72px; right:10px; }
+    .exam-board.has-logo .eb-count { padding-right:88px; }
+    .exam-board.has-logo .eb-rounds { margin-right:88px; }
+    .exam-board.has-logo .eb-note { margin-right:88px; }
+    .exam-board .eb-name, .exam-board .eb-full { padding-right:88px; }
+  }
 </style>
 </head>
 <body>
@@ -754,14 +768,14 @@ renderBlocks(); renderGrid();
 
 /* ===== CHON KI THI + BANG DEM NGUOC ===== */
 const EXAMS = {
-  hsa: {name: "HSA", full: "Đánh giá năng lực — ĐHQG Hà Nội", icon: "🎓", c1: "#1e40af", c2: "#3a8bfd", rounds: [
+  hsa: {img: "assets/logo-hsa.png", name: "HSA", full: "Đánh giá năng lực — ĐHQG Hà Nội", icon: "🎓", c1: "#1e40af", c2: "#3a8bfd", rounds: [
     {label: "Lập tài khoản dự thi", reg: "30/12/2026 – 30/01/2027", start: "2026-12-30"},
     {label: "Đăng ký ca thi", reg: "Từ 31/01/2027", start: "2027-01-31"}], note: "Lịch thi từng đợt sẽ cập nhật khi ĐHQGHN công bố."},
-  tsa: {name: "TSA", full: "Đánh giá tư duy — ĐH Bách khoa Hà Nội", icon: "🧠", c1: "#991b1b", c2: "#dc2626", rounds: [
+  tsa: {img: "assets/logo-tsa.png", name: "TSA", full: "Đánh giá tư duy — ĐH Bách khoa Hà Nội", icon: "🧠", c1: "#991b1b", c2: "#dc2626", rounds: [
     {label: "Đợt 1", reg: "Đăng ký 05–15/12/2026", start: "2026-12-05", exam: "2027-01-16", examLabel: "16–17/01/2027"},
     {label: "Đợt 2", reg: "Đăng ký 05–15/02/2027", start: "2027-02-05", exam: "2027-03-20", examLabel: "20–21/03/2027"},
     {label: "Đợt 3", reg: "Đăng ký 05–15/04/2027", start: "2027-04-05", exam: "2027-05-22", examLabel: "22–23/05/2027"}]},
-  vact: {name: "V-ACT", full: "Đánh giá năng lực — ĐHQG TP.HCM", icon: "🌟", c1: "#155e75", c2: "#0891b2", rounds: [
+  vact: {img: "assets/logo-vact.png", name: "V-ACT", full: "Đánh giá năng lực — ĐHQG TP.HCM", icon: "🌟", c1: "#155e75", c2: "#0891b2", rounds: [
     {label: "Đợt 1", reg: "Đăng ký 22/01–12/02/2027", start: "2027-01-22", exam: "2027-03-28", examLabel: "28/03/2027"},
     {label: "Đợt 2", reg: "Đăng ký: đang cập nhật", exam: "2027-05-23", examLabel: "23/05/2027"}]},
   thpt: {name: "THPT", full: "Tốt nghiệp THPT 2027", icon: "📚", c1: "#14532d", c2: "#16a34a", rounds: [
@@ -791,13 +805,14 @@ function renderExamBoard(){
     countHTML = '<div class="eb-count">⏳ ' + (days === 0 ? "Hôm nay: " + esc(next.label) + "!" : "Còn " + days + " ngày nữa — " + esc(next.label) + " (" + fmtD(next.date) + ")") + '</div>';
   } else if ((ex.rounds || []).length) countHTML = '<div class="eb-count">🎉 Các mốc chính đã qua — chúc bạn thi tốt!</div>';
   const chips = (ex.rounds || []).map(r => '<span class="eb-chip"><b>' + esc(r.label) + '</b>' + (r.examLabel ? '<br>🗓 Thi: ' + esc(r.examLabel) : '') + (r.reg ? '<br>✍️ ' + esc(r.reg) : '') + '</span>').join('');
-  box.innerHTML = '<div class="exam-board" style="background:linear-gradient(135deg,' + ex.c1 + ',' + ex.c2 + ')">'
+  box.innerHTML = '<div class="exam-board' + (ex.img ? ' has-logo' : '') + '" style="background:linear-gradient(135deg,' + ex.c1 + ',' + ex.c2 + ')">'
     + '<button class="eb-change" id="examChange">Đổi kì thi</button>'
+    + (ex.img ? '<img class="eb-logo" src="' + ex.img + '" alt="">' : '')
     + '<div class="eb-name">' + ex.icon + ' ' + esc(ex.name) + '</div>'
     + '<div class="eb-full">' + esc(ex.full) + '</div>'
     + countHTML
     + (chips ? '<div class="eb-rounds">' + chips + '</div>' : '')
-    + (ex.note ? '<div style="margin-top:10px;font-size:14.5px;opacity:.95">📌 ' + esc(ex.note) + '</div>' : '')
+    + (ex.note ? '<div class="eb-note" style="margin-top:10px;font-size:14.5px;opacity:.95">📌 ' + esc(ex.note) + '</div>' : '')
     + '</div>';
   document.getElementById("examChange").addEventListener("click", openExamPicker);
 }
@@ -807,7 +822,7 @@ function openExamPicker(){
   grid.innerHTML = Object.keys(EXAMS).map(id => {
     const ex = EXAMS[id];
     const lines = (ex.rounds || []).slice(0, 3).map(r => (r.examLabel ? '🗓 ' + esc(r.label) + ': thi ' + esc(r.examLabel) : '✍️ ' + esc(r.label) + ': ' + esc(r.reg || ''))).join('<br>') || ('📌 ' + esc(ex.note || 'Đang cập nhật'));
-    return '<button class="exam-card" data-exam="' + id + '" style="background:linear-gradient(135deg,' + ex.c1 + ',' + ex.c2 + ')"><div class="ec-icon">' + ex.icon + '</div><div class="ec-name">' + esc(ex.name) + '</div><div class="ec-full">' + esc(ex.full) + '</div><div class="ec-dates">' + lines + '</div></button>';
+    return '<button class="exam-card" data-exam="' + id + '" style="background:linear-gradient(135deg,' + ex.c1 + ',' + ex.c2 + ')">' + (ex.img ? '<img class="ec-logo" src="' + ex.img + '" alt="">' : '') + '<div class="ec-icon">' + ex.icon + '</div><div class="ec-name">' + esc(ex.name) + '</div><div class="ec-full">' + esc(ex.full) + '</div><div class="ec-dates">' + lines + '</div></button>';
   }).join('');
   grid.querySelectorAll("[data-exam]").forEach(b => b.addEventListener("click", () => chooseExam(b.getAttribute("data-exam"))));
   document.getElementById("examPicker").style.display = "flex";
