@@ -183,22 +183,22 @@
   .gate-btn.ghost { background:transparent; color:#c3d2e6; border:1.5px solid #54677f; box-shadow:none; }
   .qa-imgs img { width:64px; height:64px; object-fit:cover; border-radius:9px; margin:3px 3px 0 0; }
   #examBoard { margin-bottom:14px; }
-  .exam-board { border-radius:18px; padding:14px 16px; color:#fff; position:relative; overflow:hidden; box-shadow:0 10px 26px rgba(0,0,0,.35); }
-  .exam-board .eb-name { font-size:19px; font-weight:900; }
-  .exam-board .eb-full { font-size:13px; opacity:.92; margin-top:1px; }
-  .exam-board .eb-count { font-size:15.5px; font-weight:800; margin-top:9px; }
+  .exam-board { border-radius:18px; padding:17px 19px; color:#fff; position:relative; overflow:hidden; box-shadow:0 10px 26px rgba(0,0,0,.35); }
+  .exam-board .eb-name { font-size:23px; font-weight:900; padding-right:118px; line-height:1.25; }
+  .exam-board .eb-full { font-size:15px; opacity:.92; margin-top:2px; padding-right:118px; line-height:1.4; }
+  .exam-board .eb-count { font-size:18.5px; font-weight:800; margin-top:11px; line-height:1.45; }
   .exam-board .eb-rounds { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
-  .exam-board .eb-chip { background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35); border-radius:11px; padding:6px 10px; font-size:12.5px; line-height:1.45; }
-  .exam-board .eb-change { position:absolute; top:12px; right:12px; background:rgba(0,0,0,.28); color:#fff; border:1px solid rgba(255,255,255,.45); border-radius:99px; padding:5px 12px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .exam-board .eb-chip { background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.35); border-radius:11px; padding:8px 12px; font-size:14px; line-height:1.55; }
+  .exam-board .eb-change { position:absolute; top:14px; right:14px; font-size:13.5px; padding:7px 14px; background:rgba(0,0,0,.28); color:#fff; border:1px solid rgba(255,255,255,.45); border-radius:99px; padding:5px 12px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:inherit; }
   #examPicker { position:fixed; inset:0; z-index:150; display:none; align-items:flex-start; justify-content:center; background:rgba(4,7,13,.94); padding:16px; overflow-y:auto; }
   .exam-picker-card { width:min(680px,100%); margin:auto; }
   .exam-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:11px; margin-top:13px; }
   .exam-card { border-radius:16px; padding:14px; color:#fff; cursor:pointer; border:2px solid transparent; text-align:left; font-family:inherit; width:100%; }
   .exam-card:hover { border-color:rgba(255,255,255,.65); }
   .exam-card .ec-icon { font-size:30px; }
-  .exam-card .ec-name { font-size:18px; font-weight:900; margin-top:4px; }
-  .exam-card .ec-full { font-size:12.5px; opacity:.93; line-height:1.4; }
-  .exam-card .ec-dates { font-size:12px; margin-top:8px; background:rgba(0,0,0,.25); border-radius:9px; padding:6px 8px; line-height:1.55; }
+  .exam-card .ec-name { font-size:20px; font-weight:900; margin-top:4px; }
+  .exam-card .ec-full { font-size:13.5px; opacity:.93; line-height:1.4; }
+  .exam-card .ec-dates { font-size:13px; margin-top:8px; background:rgba(0,0,0,.25); border-radius:9px; padding:6px 8px; line-height:1.55; }
 </style>
 </head>
 <body>
@@ -206,8 +206,8 @@
   <div class="exam-picker-card">
     <div style="text-align:center">
       <div style="font-size:34px">🎯</div>
-      <div style="font-size:21px;font-weight:900;margin-top:4px">Bạn muốn thi kì thi nào?</div>
-      <div style="color:#93a7c2;font-size:14px;margin-top:5px;line-height:1.5">Chọn kì thi bạn đang ôn — web sẽ hiện bảng đếm ngược và các mốc thời gian của riêng kì thi đó. Đổi lúc nào cũng được.</div>
+      <div style="font-size:24px;font-weight:900;margin-top:4px">Bạn muốn thi kì thi nào?</div>
+      <div style="color:#93a7c2;font-size:15.5px;margin-top:5px;line-height:1.55">Chọn kì thi bạn đang ôn — web sẽ hiện bảng đếm ngược và các mốc thời gian của riêng kì thi đó. Đổi lúc nào cũng được.</div>
     </div>
     <div class="exam-grid" id="examGrid"></div>
     <button id="examSkip" class="gate-btn ghost" style="margin-top:14px">Để sau, vào học trước →</button>
@@ -797,7 +797,7 @@ function renderExamBoard(){
     + '<div class="eb-full">' + esc(ex.full) + '</div>'
     + countHTML
     + (chips ? '<div class="eb-rounds">' + chips + '</div>' : '')
-    + (ex.note ? '<div style="margin-top:9px;font-size:13px;opacity:.95">📌 ' + esc(ex.note) + '</div>' : '')
+    + (ex.note ? '<div style="margin-top:10px;font-size:14.5px;opacity:.95">📌 ' + esc(ex.note) + '</div>' : '')
     + '</div>';
   document.getElementById("examChange").addEventListener("click", openExamPicker);
 }
