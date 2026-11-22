@@ -201,6 +201,7 @@
       <label class="qa-mini" for="qaImgs">🖼 Đính kèm ảnh</label>
       <input type="file" id="qaImgs" accept="image/*" multiple hidden>
     </div>
+    <div class="qa-row"><input id="qaVid" placeholder="🎬 Dán link video YouTube/Drive nếu muốn gửi kèm (không bắt buộc)"></div>
     <div class="qa-note" id="qaImgNote">Tối đa 5 ảnh, mỗi ảnh không quá 4MB</div>
     <div id="qaThumbs"></div>
     <button id="qaSend">📩 Gửi câu hỏi</button>
@@ -362,8 +363,10 @@ function subscribeQA(vkey){
   if (!window.__db || qaSubKey === vkey) { if (wrCtx) renderQA(); return; }
   if (qaUnsub) qaUnsub();
   qaSubKey = vkey;
-  qaUnsub = window.__db.collection("questions").where("videoKey", "==", vkey).orderBy("createdAt", "asc").onSnapshot(snap => {
-    qaCache[vkey] = snap.docs.map(d => Object.assign({id: d.id}, d.data()));
+  qaUnsub = window.__db.collection("questions").where("videoKey", "==", vkey).onSnapshot(snap => {
+    const arr = snap.docs.map(d => Object.assign({id: d.id}, d.data()));
+    arr.sort((a, b) => ((a.createdAt && a.createdAt.toMillis ? a.createdAt.toMillis() : 0) - (b.createdAt && b.createdAt.toMillis ? b.createdAt.toMillis() : 0)));
+    qaCache[vkey] = arr;
     for (const q of qaCache[vkey]) {
       if (q.imgCount && !q.imgsFetched && !qaImgFetching.has(q.id)) {
         qaImgFetching.add(q.id);
@@ -377,7 +380,18 @@ function subscribeQA(vkey){
       }
     }
     if (wrCtx && wrCtx.vkey === vkey) renderQA();
-  }, () => {});
+  }, (e) => { console.warn("QA subscribe loi:", e && e.code); });
+}
+const repFiles = {};
+function vidHTML(link){
+  if (!link) return '';
+  const u = String(link);
+  const y = ytId(u) || (u.match(/youtu\.be\/([\w-]+)/) || [])[1];
+  if (y) return '<div><iframe src="https://www.youtube.com/embed/' + y + '?rel=0" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin-top:6px"></iframe></div>';
+  const dm = u.match(/drive\.google\.com\/file\/d\/([\w-]+)/);
+  if (dm) return '<div><iframe src="https://drive.google.com/file/d/' + dm[1] + '/preview" allow="autoplay; fullscreen" allowfullscreen style="width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin-top:6px"></iframe></div>';
+  if (/^https?:\/\//.test(u)) return '<div style="margin-top:6px"><a target="_blank" rel="noopener" href="' + esc(u) + '" style="color:#7db4ff;font-weight:700">🎬 Xem video đính kèm ↗</a></div>';
+  return '';
 }
 let qaFiles = [];
 function fileToDataURL(file){
@@ -411,13 +425,14 @@ function renderQA(){
   const list = document.getElementById("qaList");
   const qs = (wrCtx && qaCache[wrCtx.vkey]) || [];
   list.innerHTML = qs.map((q, qi) => {
-    const reps = (q.replies || []).map(r => '<div class="qa-rep"><div class="qa-head">' + authorHTML(r.author, r.owner) + '<span>' + esc(r.when || '') + '</span></div><div class="qa-body">' + esc(r.text) + '</div></div>').join('');
+    const reps = (q.replies || []).map(r => '<div class="qa-rep"><div class="qa-head">' + authorHTML(r.author, r.owner) + '<span>' + esc(r.when || '') + '</span></div><div class="qa-body">' + esc(r.text) + '</div>' + (r.img ? '<div class="qa-imgs"><a target="_blank" rel="noopener" href="' + esc(r.img) + '"><img src="' + esc(r.img) + '"></a></div>' : '') + vidHTML(r.vid) + '</div>').join('');
     return '<div class="qa-item"><div class="qa-head">' + authorHTML(q.author, q.owner) + (q.ts ? '<span class="qa-ts" data-tsec="' + q.tsec + '">⏱ ' + esc(q.ts) + '</span>' : '') + '<span>' + esc(q.when || '') + '</span></div>'
       + '<div class="qa-body">' + esc(q.text) + '</div>'
       + (q.imgs && q.imgs.length ? '<div class="qa-imgs">' + q.imgs.map(u => '<a target="_blank" rel="noopener" href="' + esc(u) + '"><img src="' + esc(u) + '"></a>').join('') + '</div>' : '')
+      + vidHTML(q.vid)
       + '<div class="qa-reps">' + reps + '</div>'
       + '<button class="qa-repbtn" data-qi="' + qi + '">💬 Trả lời</button>'
-      + '<div class="qa-repbox" id="repbox-' + qi + '" style="display:none"><textarea class="qa-reptext" id="reptext-' + qi + '" rows="2" placeholder="Viết câu trả lời của bạn…"></textarea><button class="qa-send2" data-send="' + qi + '">📩 Gửi trả lời</button></div>'
+      + '<div class="qa-repbox" id="repbox-' + qi + '" style="display:none"><textarea class="qa-reptext" id="reptext-' + qi + '" rows="2" placeholder="Viết câu trả lời của bạn…"></textarea><div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap;align-items:center"><button class="qa-mini" data-imgbtn="' + qi + '">🖼️ Đính kèm ảnh</button><input type="file" id="repimg-' + qi + '" accept="image/*" hidden><input id="repvid-' + qi + '" placeholder="🎬 Link video YouTube/Drive (nếu có)" style="flex:1;min-width:160px;background:#0b1220;border:1.5px solid #2b3f5c;border-radius:10px;color:#e8eef7;padding:8px 10px;font-size:13px"></div><div class="qa-note" id="repname-' + qi + '"></div><button class="qa-send2" data-send="' + qi + '">📩 Gửi trả lời</button></div>'
       + '</div>';
   }).join('');
   list.querySelectorAll(".qa-ts").forEach(ch => ch.addEventListener("click", () => {
@@ -428,14 +443,28 @@ function renderQA(){
     const bx = document.getElementById("repbox-" + b.getAttribute("data-qi"));
     bx.style.display = bx.style.display === "none" ? "block" : "none";
   }));
+  list.querySelectorAll("[data-imgbtn]").forEach(b => b.addEventListener("click", () => { const f = document.getElementById("repimg-" + b.getAttribute("data-imgbtn")); if (f) f.click(); }));
+  list.querySelectorAll("[id^='repimg-']").forEach(f => f.addEventListener("change", () => {
+    const qi = f.id.replace("repimg-", "");
+    if (f.files && f.files[0]) { repFiles[qi] = f.files[0]; const n = document.getElementById("repname-" + qi); if (n) { n.textContent = "Đã chọn ảnh: " + f.files[0].name + " 📸"; n.style.color = "#7c8ea9"; } }
+  }));
   list.querySelectorAll("[data-send]").forEach(b => b.addEventListener("click", async () => {
     const qi = +b.getAttribute("data-send");
     const text = document.getElementById("reptext-" + qi).value.trim();
-    if (!text || !wrCtx || !window.__db) return;
+    const vidEl = document.getElementById("repvid-" + qi);
+    const vid = vidEl ? vidEl.value.trim() : "";
+    if ((!text && !vid && !repFiles[qi]) || !wrCtx || !window.__db) return;
     const q = (qaCache[wrCtx.vkey] || [])[qi];
     if (!q || !q.id) return;
     const rep2 = {author: myProfile(), owner: isAdmin, text: text, when: "vừa xong"};
-    try { await window.__db.collection("questions").doc(q.id).update({replies: firebase.firestore.FieldValue.arrayUnion(rep2)}); } catch(e) {}
+    if (vid) rep2.vid = vid;
+    if (repFiles[qi]) { const d = await fileToDataURL(repFiles[qi]); if (d) rep2.img = d; }
+    try {
+      await window.__db.collection("questions").doc(q.id).update({replies: firebase.firestore.FieldValue.arrayUnion(rep2)});
+      q.replies = (q.replies || []).concat([rep2]);
+      delete repFiles[qi];
+      renderQA();
+    } catch(e) {}
   }));
 }
 document.getElementById("qaSend").addEventListener("click", async () => {
@@ -452,12 +481,16 @@ document.getElementById("qaSend").addEventListener("click", async () => {
   }
   note.textContent = "Đang gửi câu hỏi… ⏳"; note.style.color = "#7c8ea9";
   try {
-    const qref = await window.__db.collection("questions").add({videoKey: wrCtx.vkey, uid: window.__uid, author: myProfile(), owner: isAdmin, text: text, ts: tsRaw, tsec: tsec, imgs: [], imgCount: qaFiles.length, when: "vừa xong", replies: [], createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+    const qvid = document.getElementById("qaVid").value.trim();
+    const qref = await window.__db.collection("questions").add({videoKey: wrCtx.vkey, uid: window.__uid, author: myProfile(), owner: isAdmin, text: text, ts: tsRaw, tsec: tsec, imgs: [], imgCount: qaFiles.length, vid: qvid, when: "vừa xong", replies: [], createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+    const upImgs = [];
     for (let i = 0; i < qaFiles.length; i++) {
       const durl = await fileToDataURL(qaFiles[i]);
-      if (durl) await window.__db.collection("qimages").add({qid: qref.id, idx: i, data: durl, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+      if (durl) { upImgs.push(durl); await window.__db.collection("qimages").add({qid: qref.id, idx: i, data: durl, createdAt: firebase.firestore.FieldValue.serverTimestamp()}); }
     }
-    document.getElementById("qaText").value = ""; document.getElementById("qaTs").value = "";
+    (qaCache[wrCtx.vkey] = qaCache[wrCtx.vkey] || []).push({id: qref.id, videoKey: wrCtx.vkey, uid: window.__uid, author: myProfile(), owner: isAdmin, text: text, ts: tsRaw, tsec: tsec, imgs: upImgs, imgsFetched: true, imgCount: 0, vid: qvid, when: "vừa xong", replies: []});
+    renderQA();
+    document.getElementById("qaText").value = ""; document.getElementById("qaTs").value = ""; document.getElementById("qaVid").value = "";
     qaFiles = []; document.getElementById("qaThumbs").innerHTML = ""; document.getElementById("qaImgs").value = "";
     note.textContent = "Đã gửi câu hỏi ✅ Mọi người sẽ thấy và trả lời được ngay!"; note.style.color = "#7fe0a8";
   } catch(e) { note.textContent = "Gửi chưa được, thử lại nhé 😅"; note.style.color = "#f0a3a3"; }
