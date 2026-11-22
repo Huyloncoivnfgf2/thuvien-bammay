@@ -91,6 +91,7 @@
   .wr-title { flex:1; font-size:19px; font-weight:800; line-height:1.35; }
   #wrClose { flex:none; width:42px; height:42px; border-radius:50%; border:1.5px solid #54677f; background:#0d1420; color:#eef3fa; font-size:18px; cursor:pointer; }
   .wr-player { position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; overflow:hidden; }
+  .wr-player.portrait { aspect-ratio:auto; height:min(74vh,165vw); max-width:430px; margin-left:auto; margin-right:auto; }
   .wr-player iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
   .wr-foot { margin-top:8px; display:flex; justify-content:center; }
 
@@ -287,6 +288,7 @@
 <div id="watchroom"><div class="wr-card">
   <div class="wr-head"><div class="wr-title" id="wrTitle"></div><button id="wrClose" title="Đóng">✕</button></div>
   <div class="wr-player" id="wrPlayer"></div>
+  <div id="wrHint" style="display:none;color:#93a7c2;font-size:13px;text-align:center;margin-top:8px">📱 Video quay dọc — bấm nút toàn màn hình ⤢ ở góc video để xem rõ nhất</div>
   <div class="wr-fallback"><a id="wrExt" target="_blank" rel="noopener" style="display:none">↗ Nếu video không phát được, bấm mở ở trang gốc</a></div><div class="wr-foot"><button class="learn" id="wrTick" style="margin-top:0"><span class="box"></span><span id="wrTickLbl"></span></button></div>
   <div id="wrQA" style="display:none">
     <div class="hr"></div>
@@ -404,6 +406,9 @@ function wrTickUI(){
 function openWatch(title, embedUrl, ctx, extUrl){
   wrCtx = ctx;
   document.getElementById("wrTitle").textContent = title;
+  const isDrive = embedUrl.indexOf("drive.google.com") >= 0;
+  document.getElementById("wrPlayer").classList.toggle("portrait", isDrive);
+  document.getElementById("wrHint").style.display = isDrive ? "block" : "none";
   document.getElementById("wrPlayer").innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
   wrTickUI();
   const qaEl = document.getElementById("wrQA");
