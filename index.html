@@ -185,6 +185,14 @@
 </style>
 </head>
 <body>
+<div id="docView" style="display:none;position:fixed;inset:0;z-index:96;background:rgba(4,7,13,.96);padding:12px;flex-direction:column">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+    <div style="font-weight:800;font-size:16.5px;flex:1">📄 Xem đề — chỉ xem ngay trên web</div>
+    <button id="docDl" class="qa-mini">⬇️ Tải xuống</button>
+    <button id="docClose" class="qa-mini">✖ Đóng</button>
+  </div>
+  <iframe id="docFrame" style="flex:1;width:100%;border:0;border-radius:12px;background:#fff" allow="autoplay; fullscreen" allowfullscreen></iframe>
+</div>
 <div id="gate"><div class="gate-card" id="gateBody"></div></div>
 <div id="splash"><div class="splash-card"><div class="splash-ico">⚠️</div><div class="splash-text" id="splashText"></div><div class="splash-sub">Đọc cho kỹ vào nhé! 👀</div><div class="splash-bar"><div id="splashFill"></div></div></div></div>
 <div id="watchroom"><div class="wr-card">
@@ -313,6 +321,26 @@ function openWatch(title, embedUrl, ctx, extUrl){
   document.getElementById("watchroom").style.display = "flex";
   document.body.style.overflow = "hidden";
 }
+let docUrl = "";
+function driveFileId(u){ const m = String(u || "").match(/drive\.google\.com\/file\/d\/([\w-]+)/) || String(u || "").match(/[?&]id=([\w-]+)/); return m ? m[1] : null; }
+function openDoc(u){
+  const id = driveFileId(u);
+  if (!id) { window.open(u, "_blank", "noopener"); return; }
+  docUrl = u;
+  document.getElementById("docFrame").src = "https://drive.google.com/file/d/" + id + "/preview";
+  document.getElementById("docView").style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+function closeDoc(){ document.getElementById("docView").style.display = "none"; document.getElementById("docFrame").src = ""; document.body.style.overflow = ""; }
+function dlDe(u){
+  const id = driveFileId(u);
+  const a = document.createElement("a");
+  a.href = id ? ("https://drive.google.com/uc?export=download&id=" + id) : u;
+  a.setAttribute("download", "");
+  document.body.appendChild(a); a.click(); a.remove();
+}
+document.getElementById("docClose").addEventListener("click", closeDoc);
+document.getElementById("docDl").addEventListener("click", () => { if (docUrl) dlDe(docUrl); });
 function closeWatch(){
   document.getElementById("watchroom").style.display = "none";
   document.getElementById("wrPlayer").innerHTML = "";
@@ -524,7 +552,7 @@ function renderBlocks(){
     const fw = !!watched["F:" + sec];
     html += '<div class="featured"><span class="tag">⭐ QUAN TRỌNG — XEM ĐẦU TIÊN ⭐</span><div class="ftext">' + esc(F.text) + '</div><div class="btns">';
     if (F.video) html += '<button class="btn video" id="featWatch">▶ Xem video</button>';
-    if (F.de) html += '<a class="btn de" target="_blank" rel="noopener" href="' + F.de + '">' + ICO_DOC + 'Xem đề</a>';
+    if (F.de) html += '<button class="btn de" id="featViewDe">👁️ Xem đề</button><button class="btn de" id="featDlDe">⬇️ Tải đề</button>';
     html += '</div>'
       + '<button class="learn small' + (fw ? ' on' : '') + '" id="featLearn"><span class="box">' + (fw ? ICO_CHECK : '') + '</span><span class="lbl">' + (fw ? 'Đã xem video này' : 'Đánh dấu đã xem') + '</span></button></div>';
   }
@@ -543,6 +571,10 @@ function renderBlocks(){
   wrap.innerHTML = html;
   const fw2 = document.getElementById("featWatch");
   if (fw2) fw2.addEventListener("click", () => openWatch("⭐ Video quan trọng — xem đầu tiên nè!", ytEmbed(F.video), {type:"feat", sec:sec, vkey:"feat:" + sec, yt: ytId(F.video)}, F.video));
+  const fvd = document.getElementById("featViewDe");
+  if (fvd) fvd.addEventListener("click", () => openDoc(F.de));
+  const fdd = document.getElementById("featDlDe");
+  if (fdd) fdd.addEventListener("click", () => dlDe(F.de));
   const fl = document.getElementById("featLearn");
   if (fl) fl.addEventListener("click", () => {
     const k = "F:" + sec;
@@ -608,7 +640,7 @@ function renderGrid(){
     else {
       html += '<div class="btns">';
       if (it.video) html += '<button class="btn video" data-watch="' + esc(it.stt) + '" data-yt="' + ytId(it.video) + '">🎬 Xem video</button>';
-      if (it.de) html += '<a class="btn de" target="_blank" rel="noopener" href="' + it.de + '">' + ICO_DOC + 'Xem đề</a>';
+      if (it.de) html += '<button class="btn de" data-viewde="' + esc(it.de) + '">👁️ Xem đề</button><button class="btn de" data-dlde="' + esc(it.de) + '">⬇️ Tải đề</button>';
       html += '</div><div class="hr"></div>';
       html += '<button class="learn' + (learned ? " on" : "") + '" data-stt="' + esc(it.stt) + '"><span class="box">' + (learned ? ICO_CHECK : "") + '</span>' + (learned ? "Đã học rồi ✅" : "Đánh dấu đã học") + '</button>';
     }
@@ -619,6 +651,8 @@ function renderGrid(){
   box.querySelectorAll("[data-watch]").forEach(b => b.addEventListener("click", () => {
     openWatch("🎬 Bài " + b.getAttribute("data-watch") + " — " + NAMES[sec], "https://www.youtube.com/embed/" + b.getAttribute("data-yt") + "?rel=0&autoplay=1", {type:"card", sec:sec, stt:b.getAttribute("data-watch"), vkey:"card:" + sec + ":" + b.getAttribute("data-watch"), yt: b.getAttribute("data-yt")}, "https://www.youtube.com/watch?v=" + b.getAttribute("data-yt"));
   }));
+  box.querySelectorAll("[data-viewde]").forEach(b => b.addEventListener("click", () => openDoc(b.getAttribute("data-viewde"))));
+  box.querySelectorAll("[data-dlde]").forEach(b => b.addEventListener("click", () => dlDe(b.getAttribute("data-dlde"))));
   box.querySelectorAll(".learn").forEach(b => b.addEventListener("click", () => {
     const k = key(sec, b.getAttribute("data-stt"));
     if (progress[k]) delete progress[k]; else progress[k] = true;
@@ -684,6 +718,7 @@ function lockAdmin(){
   syncAdminUI(); closeAdmin();
 }
 function adminLogout(){
+  if (window.__clearMySession) window.__clearMySession();
   try { sessionStorage.removeItem("tvbm-gtoken"); } catch(e) {}
   try { localStorage.removeItem("tvbm-me"); localStorage.removeItem("tvbm-gtoken-cache"); localStorage.removeItem("tvbm-admin"); } catch(e) {}
   if (window.firebase && firebase.auth) firebase.auth().signOut().then(() => location.reload()); else location.reload();
@@ -889,6 +924,36 @@ function errorHTML(msg){ return '<div class="gate-emoji">😅</div><div class="g
 function loadingHTML(){ return '<div class="gate-emoji">⏳</div><div class="gate-title">Đang tải thư viện…</div><div class="gate-note">Chờ một xíu nhé 🚀</div>'; }
 function emailGateHTML(msg){ return '<div class="gate-emoji">📚</div><div class="gate-title">Thư viện Video Bấm Máy</div><div class="gate-note">Nhập <b>email đã được chủ chia sẻ</b> để vào thư viện nhé — chỉ nhập 1 lần, web nhớ luôn, không cần mật khẩu.</div><input class="adm-input" id="gateEmail" type="email" placeholder="email-cua-ban@gmail.com" style="text-align:center" autocomplete="email"><div class="adm-err" id="gateErr">' + (msg || "") + '</div><button class="gate-btn" id="gateGo" style="margin-top:10px">🚪 Vào thư viện</button>'; }
 function wireEmailGate(){ const go = () => checkGateEmail(); const b = document.getElementById("gateGo"); if (b) b.addEventListener("click", go); const i = document.getElementById("gateEmail"); if (i) i.addEventListener("keydown", (e) => { if (e.key === "Enter") go(); }); }
+function newSessionId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 10); }
+async function claimSession(em){
+  const id = newSessionId();
+  try { localStorage.setItem("tvbm-me", em); localStorage.setItem("tvbm-session", id); } catch(e) {}
+  try { await window.__db.collection("users").doc(em).set({session: {id: id, at: new Date().toISOString()}}, {merge: true}); } catch(e) {}
+}
+function sessionWarnHTML(em){
+  return '<div class="gate-emoji">📱</div><div class="gate-title">Tài khoản đang dùng ở thiết bị khác</div><div class="gate-note"><b>' + esc(em) + '</b> đang được đăng nhập trên 1 thiết bị khác.<br>Mỗi tài khoản chỉ dùng <b>1 thiết bị</b> — nếu vào ở thiết bị này, thiết bị kia sẽ <b>bị đăng xuất</b> ngay.</div><br><button class="gate-btn" id="gateKick">✅ Vào đây, đăng xuất thiết bị kia</button><br><button class="gate-btn ghost" id="gateBack" style="margin-top:9px">⬅ Quay lại</button>';
+}
+function wireSessionWarn(em){
+  const k = document.getElementById("gateKick");
+  if (k) k.addEventListener("click", async () => { await claimSession(em); bootWithEmail(em); });
+  const b = document.getElementById("gateBack");
+  if (b) b.addEventListener("click", () => { gate(emailGateHTML()); wireEmailGate(); });
+}
+window.__clearMySession = async function(){
+  try {
+    const em = window.__email || ""; const my = localStorage.getItem("tvbm-session") || "";
+    if (em && my && window.__db) {
+      const ud = window.__db.collection("users").doc(em);
+      const s = await ud.get(); const sd = s.exists ? (s.data() || {}).session : null;
+      if (sd && sd.id === my) await ud.set({session: null}, {merge: true});
+    }
+  } catch(e) {}
+};
+function kickOut(){
+  if (window.__kicked) return; window.__kicked = true;
+  try { localStorage.removeItem("tvbm-me"); localStorage.removeItem("tvbm-session"); sessionStorage.setItem("tvbm-kicked", "1"); } catch(e) {}
+  location.reload();
+}
 async function checkGateEmail(){
   const inp = document.getElementById("gateEmail"), err = document.getElementById("gateErr");
   const em = ((inp && inp.value) || "").trim().toLowerCase();
@@ -904,7 +969,15 @@ async function checkGateEmail(){
     err.textContent = "Email này chưa được chủ duyệt 😢 Báo chủ thêm email của bạn vào danh sách trong web nhé.";
     return;
   }
-  try { localStorage.setItem("tvbm-me", em); } catch(e) {}
+  let otherActive = false;
+  try {
+    const ud = await window.__db.collection("users").doc(em).get();
+    const sd = ud.exists ? (ud.data() || {}).session : null;
+    let mySess = ""; try { mySess = localStorage.getItem("tvbm-session") || ""; } catch(e) {}
+    if (sd && sd.id && sd.id !== mySess) otherActive = true;
+  } catch(e) {}
+  if (otherActive) { gate(sessionWarnHTML(em)); wireSessionWarn(em); return; }
+  await claimSession(em);
   bootWithEmail(em);
 }
 function noCacheHTML(){ return '<div class="gate-emoji">🛠️</div><div class="gate-title">Thư viện đang chờ cập nhật</div><div class="gate-note">Chủ web chưa nạp dữ liệu lần đầu — quay lại sau ít phút nữa nhé 🙏</div><br><button class="gate-btn" onclick="location.reload()">🔄 Thử lại</button>'; }
@@ -1099,6 +1172,8 @@ function startCloudSync(){
   window.__udoc.onSnapshot(doc => {
     if (!doc.exists) return;
     const d = doc.data();
+    let mySess = ""; try { mySess = localStorage.getItem("tvbm-session") || ""; } catch(e) {}
+    if (d.session && d.session.id && mySess && d.session.id !== mySess) { kickOut(); return; }
     if (d.progress) progress = d.progress;
     if (d.watched) watched = d.watched;
     if (Array.isArray(d.readNotifs)) readIds = d.readNotifs;
@@ -1118,13 +1193,22 @@ function initCloud(){
   window.__db = firebase.firestore();
   try { window.__storage = firebase.storage(); } catch(e) {}
   firebase.auth().onAuthStateChanged((user) => { if (user && (user.email || "").toLowerCase() === OWNER_EMAIL) window.__fbOwner = true; });
+  let kicked = false;
+  try { kicked = sessionStorage.getItem("tvbm-kicked") === "1"; if (kicked) sessionStorage.removeItem("tvbm-kicked"); } catch(e) {}
   let em = "";
   try { em = (localStorage.getItem("tvbm-me") || "").toLowerCase(); } catch(e) {}
-  if (!em) { gate(emailGateHTML()); wireEmailGate(); return; }
+  if (!em) { gate(emailGateHTML(kicked ? "Thiết bị này đã bị đăng xuất vì tài khoản được đăng nhập ở thiết bị khác 📱 Nhập lại email để vào ở thiết bị này." : "")); wireEmailGate(); return; }
   (async () => {
     if (em !== OWNER_EMAIL) {
-      try { const s = await window.__db.collection("allowed").doc(em).get(); if (!s.exists) { try { localStorage.removeItem("tvbm-me"); } catch(e) {} gate(emailGateHTML("Email này không còn trong danh sách được duyệt nữa.")); wireEmailGate(); return; } } catch(e) {}
+      try { const s = await window.__db.collection("allowed").doc(em).get(); if (!s.exists) { try { localStorage.removeItem("tvbm-me"); localStorage.removeItem("tvbm-session"); } catch(e) {} gate(emailGateHTML("Email này không còn trong danh sách được duyệt nữa.")); wireEmailGate(); return; } } catch(e) {}
     }
+    try {
+      let mySess = ""; try { mySess = localStorage.getItem("tvbm-session") || ""; } catch(e) {}
+      const ud = await window.__db.collection("users").doc(em).get();
+      const sd = ud.exists ? (ud.data() || {}).session : null;
+      if (sd && sd.id && mySess && sd.id !== mySess) { kickOut(); return; }
+      if (!sd || !sd.id || !mySess) await claimSession(em);
+    } catch(e) {}
     bootWithEmail(em);
   })();
 }
