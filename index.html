@@ -91,7 +91,7 @@
   .wr-title { flex:1; font-size:19px; font-weight:800; line-height:1.35; }
   #wrClose { flex:none; width:42px; height:42px; border-radius:50%; border:1.5px solid #54677f; background:#0d1420; color:#eef3fa; font-size:18px; cursor:pointer; }
   .wr-player { position:relative; width:100%; aspect-ratio:16/9; background:#000; border-radius:14px; overflow:hidden; }
-  .wr-player.portrait { aspect-ratio:auto; height:min(66vh,150vw); max-width:430px; margin-left:auto; margin-right:auto; }
+  .wr-player.portrait { aspect-ratio:auto; height:min(74vh,165vw); max-width:430px; margin-left:auto; margin-right:auto; }
   .wr-player iframe { position:absolute; inset:0; width:100%; height:100%; border:0; }
   .wr-foot { margin-top:8px; display:flex; justify-content:center; }
 
@@ -261,15 +261,6 @@
   #ctrlPanel #search { margin-top: 0; }
   #ctrlPanel .tabs { margin-top: 10px; }
   #ctrlPanel .chips { margin-top: 10px; }
-  #wrPlayer video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; }
-  #nvBigPlay { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:76px; height:76px; border-radius:50%; border:none; background:rgba(38,110,240,.93); color:#fff; font-size:31px; cursor:pointer; z-index:3; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 26px rgba(0,0,0,.5); }
-  #nvBar { display:none; margin-top:10px; background:#131c2e; border:1px solid #2b3f5c; border-radius:14px; padding:10px 12px; position:sticky; bottom:6px; z-index:5; box-shadow:0 -6px 18px rgba(0,0,0,.35); }
-  .nv-row { display:flex; align-items:center; gap:8px; }
-  .nv-btn { flex:none; background:#1a2436; border:1.5px solid #3a4a61; color:#e8eef7; border-radius:11px; padding:9px 12px; font-size:14.5px; font-weight:700; cursor:pointer; font-family:inherit; }
-  .nv-btn:active { transform:scale(.95); }
-  #nvTime { font-size:12.5px; color:#93a7c2; min-width:84px; text-align:center; }
-  #nvSeek { flex:1; accent-color:#3a8bfd; height:26px; }
-  #nvVol { width:76px; accent-color:#3a8bfd; }
 </style>
 </head>
 <body>
@@ -297,21 +288,7 @@
 <div id="watchroom"><div class="wr-card">
   <div class="wr-head"><div class="wr-title" id="wrTitle"></div><button id="wrClose" title="Đóng">✕</button></div>
   <div class="wr-player" id="wrPlayer"></div>
-  <div id="nvBar">
-    <div class="nv-row">
-      <button class="nv-btn" id="nvPlay">▶</button>
-      <button class="nv-btn" id="nvBack">⏪ 10 giây</button>
-      <button class="nv-btn" id="nvFwd">10 giây ⏩</button>
-      <span id="nvTime">0:00 / 0:00</span>
-      <button class="nv-btn" id="nvFS" style="margin-left:auto">⤢</button>
-    </div>
-    <div class="nv-row" style="margin-top:6px">
-      <span style="font-size:15px">🔊</span>
-      <input type="range" id="nvVol" min="0" max="1" step="0.05" value="1">
-      <input type="range" id="nvSeek" min="0" max="1000" value="0">
-    </div>
-  </div>
-  <div id="wrHint" style="display:none;color:#93a7c2;font-size:13px;text-align:center;margin-top:8px">📱 Trình phát riêng của web — tua, chỉnh âm lượng, toàn màn hình ở thanh ngay dưới video</div>
+  <div id="wrHint" style="display:none;color:#93a7c2;font-size:13px;text-align:center;margin-top:8px">📱 Video quay dọc <button onclick="wrFS()" style="margin-left:6px;background:#1a2436;border:1.5px solid #3a8bfd;color:#cfe2ff;border-radius:99px;padding:6px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⤢ Toàn màn hình</button></div>
   <div class="wr-fallback"><a id="wrExt" target="_blank" rel="noopener" style="display:none">↗ Nếu video không phát được, bấm mở ở trang gốc</a></div><div class="wr-foot"><button class="learn" id="wrTick" style="margin-top:0"><span class="box"></span><span id="wrTickLbl"></span></button></div>
   <div id="wrQA" style="display:none">
     <div class="hr"></div>
@@ -432,17 +409,8 @@ function openWatch(title, embedUrl, ctx, extUrl){
   const isDrive = embedUrl.indexOf("drive.google.com") >= 0;
   document.getElementById("wrPlayer").classList.toggle("portrait", isDrive);
   document.getElementById("wrHint").style.display = isDrive ? "block" : "none";
-  document.getElementById("nvBar").style.display = "none";
   document.getElementById("wrPlayer").innerHTML = "";
-  const fid = isDrive ? driveFileId(embedUrl) : null;
-  setTimeout(() => {
-    if (fid) {
-      document.getElementById("wrPlayer").innerHTML = '<video id="nvVideo" playsinline preload="auto" src="https://drive.usercontent.google.com/download?id=' + fid + '&export=view"></video><button id="nvBigPlay">▶</button>';
-      setupNativePlayer(fid, embedUrl);
-    } else {
-      document.getElementById("wrPlayer").innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
-    }
-  }, 60);
+  setTimeout(() => { document.getElementById("wrPlayer").innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>'; }, 60);
   wrTickUI();
   const qaEl = document.getElementById("wrQA");
   const showQA = !!wrCtx;
@@ -453,58 +421,6 @@ function openWatch(title, embedUrl, ctx, extUrl){
   document.getElementById("watchroom").style.display = "flex";
   document.body.style.overflow = "hidden";
 }
-function curVideo(){ return document.getElementById("nvVideo"); }
-function fmtT(s){ s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
-function setupNativePlayer(fid, embedUrl){
-  const v = curVideo();
-  const bar = document.getElementById("nvBar");
-  if (!v || !bar) return;
-  bar.style.display = "block";
-  const big = document.getElementById("nvBigPlay");
-  const playBtn = document.getElementById("nvPlay");
-  const timeEl = document.getElementById("nvTime");
-  const seek = document.getElementById("nvSeek");
-  let fellBack = false;
-  function fallback(){
-    if (fellBack) return; fellBack = true;
-    bar.style.display = "none";
-    document.getElementById("wrPlayer").innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
-  }
-  let metaOk = false;
-  v.addEventListener("loadedmetadata", () => { metaOk = true; });
-  v.addEventListener("error", () => {
-    setTimeout(() => { if (!metaOk) fallback(); }, 10000);
-  }, true);
-  function syncUI(){
-    const playing = !v.paused && !v.ended;
-    playBtn.textContent = playing ? "⏸" : "▶";
-    if (big) big.style.display = playing ? "none" : "flex";
-  }
-  function toggle(){ if (v.paused) { const pr = v.play(); if (pr) pr.catch(() => {}); } else v.pause(); }
-  v.addEventListener("click", toggle);
-  if (big) big.addEventListener("click", toggle);
-  v.addEventListener("play", syncUI);
-  v.addEventListener("pause", syncUI);
-  v.addEventListener("ended", syncUI);
-  v.addEventListener("loadedmetadata", () => { timeEl.textContent = "0:00 / " + fmtT(v.duration); });
-  v.addEventListener("timeupdate", () => {
-    if (v.duration) seek.value = Math.round(v.currentTime / v.duration * 1000);
-    timeEl.textContent = fmtT(v.currentTime) + " / " + fmtT(v.duration);
-  });
-  syncUI();
-}
-document.getElementById("nvPlay").addEventListener("click", () => { const v = curVideo(); if (v) { if (v.paused) { const pr = v.play(); if (pr) pr.catch(() => {}); } else v.pause(); } });
-document.getElementById("nvBack").addEventListener("click", () => { const v = curVideo(); if (v) v.currentTime = Math.max(0, v.currentTime - 10); });
-document.getElementById("nvFwd").addEventListener("click", () => { const v = curVideo(); if (v) v.currentTime = Math.min(v.duration || 1e12, v.currentTime + 10); });
-document.getElementById("nvSeek").addEventListener("input", e => { const v = curVideo(); if (v && v.duration) v.currentTime = (+e.target.value) / 1000 * v.duration; });
-document.getElementById("nvVol").addEventListener("input", e => { const v = curVideo(); if (v) { try { v.volume = +e.target.value; } catch(err) {} } });
-document.getElementById("nvFS").addEventListener("click", () => {
-  const v = curVideo();
-  if (v && v.webkitEnterFullscreen) { try { v.webkitEnterFullscreen(); return; } catch(e) {} }
-  const el = document.getElementById("wrPlayer");
-  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-  else if (v && v.requestFullscreen) v.requestFullscreen().catch(() => {});
-});
 function wrFS(){
   const el = document.getElementById("wrPlayer");
   if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
@@ -700,8 +616,6 @@ function renderQA(){
   }).join('');
   list.querySelectorAll(".qa-ts").forEach(ch => ch.addEventListener("click", () => {
     const s = +ch.getAttribute("data-tsec");
-    const nv = curVideo();
-    if (nv) { nv.currentTime = s; const pr = nv.play(); if (pr) pr.catch(() => {}); return; }
     if (wrCtx && wrCtx.yt) document.getElementById("wrPlayer").innerHTML = '<iframe src="https://www.youtube.com/embed/' + wrCtx.yt + '?rel=0&start=' + s + '&autoplay=1" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
   }));
   list.querySelectorAll("[data-delq]").forEach(b => b.addEventListener("click", async () => {
