@@ -288,7 +288,7 @@
 <div id="watchroom"><div class="wr-card">
   <div class="wr-head"><div class="wr-title" id="wrTitle"></div><button id="wrClose" title="Đóng">✕</button></div>
   <div class="wr-player" id="wrPlayer"></div>
-  <div id="wrHint" style="display:none;color:#93a7c2;font-size:13px;text-align:center;margin-top:8px">📱 Video quay dọc — bấm nút toàn màn hình ⤢ ở góc video để xem rõ nhất</div>
+  <div id="wrHint" style="display:none;color:#93a7c2;font-size:13px;text-align:center;margin-top:8px">📱 Video quay dọc <button onclick="wrFS()" style="margin-left:6px;background:#1a2436;border:1.5px solid #3a8bfd;color:#cfe2ff;border-radius:99px;padding:6px 13px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">⤢ Toàn màn hình</button></div>
   <div class="wr-fallback"><a id="wrExt" target="_blank" rel="noopener" style="display:none">↗ Nếu video không phát được, bấm mở ở trang gốc</a></div><div class="wr-foot"><button class="learn" id="wrTick" style="margin-top:0"><span class="box"></span><span id="wrTickLbl"></span></button></div>
   <div id="wrQA" style="display:none">
     <div class="hr"></div>
@@ -409,7 +409,8 @@ function openWatch(title, embedUrl, ctx, extUrl){
   const isDrive = embedUrl.indexOf("drive.google.com") >= 0;
   document.getElementById("wrPlayer").classList.toggle("portrait", isDrive);
   document.getElementById("wrHint").style.display = isDrive ? "block" : "none";
-  document.getElementById("wrPlayer").innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+  document.getElementById("wrPlayer").innerHTML = "";
+  setTimeout(() => { document.getElementById("wrPlayer").innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>'; }, 60);
   wrTickUI();
   const qaEl = document.getElementById("wrQA");
   const showQA = !!wrCtx;
@@ -419,6 +420,11 @@ function openWatch(title, embedUrl, ctx, extUrl){
   if (extUrl) { ext.href = extUrl; ext.style.display = "inline"; } else { ext.style.display = "none"; }
   document.getElementById("watchroom").style.display = "flex";
   document.body.style.overflow = "hidden";
+}
+function wrFS(){
+  const el = document.getElementById("wrPlayer");
+  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
 }
 let docUrl = "";
 function driveFileId(u){ const m = String(u || "").match(/drive\.google\.com\/file\/d\/([\w-]+)/) || String(u || "").match(/[?&]id=([\w-]+)/); return m ? m[1] : null; }
