@@ -265,7 +265,7 @@
   </div>
 </header>
 <main><div class="wrap"><div id="adminStrip"></div><div id="blocks"></div><div id="gridwrap"></div></div></main>
-<footer>Tick “đã học / đã xem” được lưu trên chính máy này 📱💻<br>Bản chính thức sẽ có đăng nhập Google xịn xò 🔐 — chỉ ai được chia sẻ trên Drive mới xem được, và tự cập nhật khi bạn sửa bảng.</footer>
+<footer>Tick “đã học / đã xem” được lưu theo tài khoản của bạn, học trên máy nào cũng đồng bộ ☁️<br>Chủ sửa bảng là web cập nhật dữ liệu mới cho mọi người 📚</footer>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -1069,13 +1069,23 @@ async function loadFromCache(){
 async function writeCache(){
   try { const now = new Date().toISOString(); await window.__db.collection("library").doc("cache").set({json: JSON.stringify(DATA), updatedAt: now}); window.__cacheAt = now; } catch(e) {}
 }
+async function ownerAutoRefresh(){
+  if (!isOwner) return;
+  let tok = null;
+  try { tok = sessionStorage.getItem("tvbm-gtoken"); } catch(e) {}
+  if (!tok) tok = readTokenCache();
+  if (!tok) tok = await trySilentToken();
+  if (!tok) return;
+  const ok = await loadSheetData(tok);
+  if (ok === true) { await writeCache(); renderBlocks(); renderGrid(); }
+}
 async function bootWithEmail(em){
   window.__uid = em; window.__email = em;
   isOwner = (em === OWNER_EMAIL);
   syncAdminUI();
   gate(loadingHTML());
   const ok = await loadFromCache();
-  if (ok) { enterLibrary(); return; }
+  if (ok) { enterLibrary(); ownerAutoRefresh(); return; }
   if (isOwner) { gate(ownerFirstHTML()); const b = document.getElementById("ownFirst"); if (b) b.addEventListener("click", ownerFirstFetch); return; }
   gate(noCacheHTML());
 }
