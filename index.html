@@ -437,7 +437,7 @@ function openWatch(title, embedUrl, ctx, extUrl){
   const fid = isDrive ? driveFileId(embedUrl) : null;
   setTimeout(() => {
     if (fid) {
-      document.getElementById("wrPlayer").innerHTML = '<video id="nvVideo" playsinline preload="auto" src="https://drive.usercontent.google.com/download?id=' + fid + '&export=download&confirm=t"></video><button id="nvBigPlay">▶</button>';
+      document.getElementById("wrPlayer").innerHTML = '<video id="nvVideo" playsinline preload="auto" src="https://drive.google.com/uc?export=view&id=' + fid + '"></video><button id="nvBigPlay">▶</button>';
       setupNativePlayer(fid, embedUrl);
     } else {
       document.getElementById("wrPlayer").innerHTML = '<iframe src="' + embedUrl + '" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
