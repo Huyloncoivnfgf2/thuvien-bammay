@@ -213,6 +213,8 @@
     .exam-board.has-logo .eb-note { margin-right:88px; }
     .exam-board .eb-name, .exam-board .eb-full { padding-right:88px; }
   }
+  .qa-del { margin-left:auto; background:rgba(220,60,60,.13); color:#f0a3a3; border:1px solid rgba(220,60,60,.45); border-radius:8px; padding:3px 10px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+  .qa-del:hover { background:rgba(220,60,60,.25); }
 </style>
 </head>
 <body>
@@ -535,12 +537,14 @@ function authorHTML(a, owner){
   a = a || {};
   return avaHTML(a) + '<b>' + esc(a.name || "Bạn") + '</b>' + (owner ? '<span class="qa-owner">👑 Chủ</span>' : '');
 }
+function canDelQ(q){ return isOwnerUser() || !!(q && q.uid && window.__uid && q.uid === window.__uid); }
+function canDelR(r){ return isOwnerUser() || !!(r && r.uid && window.__uid && r.uid === window.__uid); }
 function renderQA(){
   const list = document.getElementById("qaList");
   const qs = (wrCtx && qaCache[wrCtx.vkey]) || [];
   list.innerHTML = qs.map((q, qi) => {
-    const reps = (q.replies || []).map(r => '<div class="qa-rep"><div class="qa-head">' + authorHTML(r.author, r.owner) + '<span>' + esc(r.when || '') + '</span></div><div class="qa-body">' + esc(r.text) + '</div>' + (r.img ? '<div class="qa-imgs"><a target="_blank" rel="noopener" href="' + esc(r.img) + '"><img src="' + esc(r.img) + '"></a></div>' : '') + vidHTML(r.vid) + '</div>').join('');
-    return '<div class="qa-item"><div class="qa-head">' + authorHTML(q.author, q.owner) + (q.ts ? '<span class="qa-ts" data-tsec="' + q.tsec + '">⏱ ' + esc(q.ts) + '</span>' : '') + '<span>' + esc(q.when || '') + '</span></div>'
+    const reps = (q.replies || []).map((r, ri) => '<div class="qa-rep"><div class="qa-head">' + authorHTML(r.author, r.owner) + '<span>' + esc(r.when || '') + '</span>' + (canDelR(r) ? '<button class="qa-del" data-delr="' + qi + ':' + ri + '">' + (r.uid && r.uid === window.__uid ? '↩ Thu hồi' : '🗑 Xoá') + '</button>' : '') + '</div><div class="qa-body">' + esc(r.text) + '</div>' + (r.img ? '<div class="qa-imgs"><a target="_blank" rel="noopener" href="' + esc(r.img) + '"><img src="' + esc(r.img) + '"></a></div>' : '') + vidHTML(r.vid) + '</div>').join('');
+    return '<div class="qa-item"><div class="qa-head">' + authorHTML(q.author, q.owner) + (q.ts ? '<span class="qa-ts" data-tsec="' + q.tsec + '">⏱ ' + esc(q.ts) + '</span>' : '') + '<span>' + esc(q.when || '') + '</span>' + (canDelQ(q) ? '<button class="qa-del" data-delq="' + qi + '">' + (q.uid && q.uid === window.__uid ? '↩ Thu hồi' : '🗑 Xoá') + '</button>' : '') + '</div>'
       + '<div class="qa-body">' + esc(q.text) + '</div>'
       + (q.imgs && q.imgs.length ? '<div class="qa-imgs">' + q.imgs.map(u => '<a target="_blank" rel="noopener" href="' + esc(u) + '"><img src="' + esc(u) + '"></a>').join('') + '</div>' : '')
       + vidHTML(q.vid)
@@ -552,6 +556,29 @@ function renderQA(){
   list.querySelectorAll(".qa-ts").forEach(ch => ch.addEventListener("click", () => {
     const s = +ch.getAttribute("data-tsec");
     if (wrCtx && wrCtx.yt) document.getElementById("wrPlayer").innerHTML = '<iframe src="https://www.youtube.com/embed/' + wrCtx.yt + '?rel=0&start=' + s + '&autoplay=1" allow="autoplay; fullscreen; encrypted-media" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+  }));
+  list.querySelectorAll("[data-delq]").forEach(b => b.addEventListener("click", async () => {
+    const qi = +b.getAttribute("data-delq");
+    const q = (qaCache[wrCtx.vkey] || [])[qi];
+    if (!q || !q.id || !window.__db) return;
+    if (!confirm("Xoá câu hỏi này và tất cả trả lời bên dưới?")) return;
+    try {
+      await window.__db.collection("questions").doc(q.id).delete();
+      const snap = await window.__db.collection("qimages").where("qid", "==", q.id).get();
+      for (const d of snap.docs) await d.ref.delete();
+    } catch(e) {}
+    qaCache[wrCtx.vkey] = (qaCache[wrCtx.vkey] || []).filter(x => x.id !== q.id);
+    renderQA();
+  }));
+  list.querySelectorAll("[data-delr]").forEach(b => b.addEventListener("click", async () => {
+    const pr = b.getAttribute("data-delr").split(":").map(Number);
+    const q = (qaCache[wrCtx.vkey] || [])[pr[0]];
+    if (!q || !q.id || !q.replies || !q.replies[pr[1]] || !window.__db) return;
+    if (!confirm("Thu hồi trả lời này?")) return;
+    const newReps = q.replies.filter((_, i) => i !== pr[1]);
+    try { await window.__db.collection("questions").doc(q.id).update({replies: newReps}); } catch(e) {}
+    q.replies = newReps;
+    renderQA();
   }));
   list.querySelectorAll(".qa-repbtn").forEach(b => b.addEventListener("click", () => {
     const bx = document.getElementById("repbox-" + b.getAttribute("data-qi"));
@@ -570,7 +597,7 @@ function renderQA(){
     if ((!text && !vid && !repFiles[qi]) || !wrCtx || !window.__db) return;
     const q = (qaCache[wrCtx.vkey] || [])[qi];
     if (!q || !q.id) return;
-    const rep2 = {author: myProfile(), owner: isAdmin, text: text, when: "vừa xong"};
+    const rep2 = {author: myProfile(), owner: isAdmin, text: text, when: "vừa xong", uid: window.__uid};
     if (vid) rep2.vid = vid;
     if (repFiles[qi]) { const d = await fileToDataURL(repFiles[qi]); if (d) rep2.img = d; }
     try {
