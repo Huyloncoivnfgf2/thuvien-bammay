@@ -7,7 +7,7 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background:#0c1220; color:#eef3fa; font-family: Arial, Helvetica, sans-serif; -webkit-text-size-adjust:100%; }
-  header { position: sticky; top:0; z-index:10; background:#111a2b; border-bottom:1px solid #2a3852; padding:14px 16px 12px; }
+  header { background:#111a2b; border-bottom:1px solid #2a3852; padding:14px 16px 12px; }
   .wrap { max-width: 1060px; margin: 0 auto; }
   h1 { font-size: 23px; font-weight: 800; }
   .sub { color:#93a7c2; font-size: 13px; margin-top: 3px; }
@@ -251,6 +251,15 @@
     .exam-board .eb-chip { font-size: 13px; }
     .emptyline { font-size: 14.5px; }
   }
+  #ctrlBar { position: sticky; top: 0; z-index: 40; background: rgba(17,26,43,.97); backdrop-filter: blur(9px); padding: 10px 16px 12px; border-bottom: 1px solid #2a3852; }
+  #ctrlStrip { display: none; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 700; color: #cfe0f5; padding: 2px 0 9px; cursor: pointer; }
+  body.scrolled #ctrlStrip { display: flex; }
+  #ctrlToggle { margin-left: auto; flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1.5px solid #3a4a61; background: #182238; color: #e8eef7; font-size: 15px; cursor: pointer; font-family: inherit; }
+  body.ctrl-closed #ctrlPanel { display: none; }
+  body.ctrl-closed #ctrlStrip { padding-bottom: 2px; }
+  #ctrlPanel #search { margin-top: 0; }
+  #ctrlPanel .tabs { margin-top: 10px; }
+  #ctrlPanel .chips { margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -326,14 +335,19 @@
     <button class="iconbtn" id="profileBtn" title="Hồ sơ của bạn">👤</button>
     <button class="iconbtn" id="bellBtn" title="Thông báo">🔔<span id="bellBadge"></span></button>
     <button class="iconbtn" id="adminBtn" title="Khu vực của chủ">🔑</button></div>
+    <div class="progress">
+      <div class="lbl"><span id="progText">🏆 Đã học 0/0 bài</span><span id="progPct">0%</span></div>
+      <div class="bar"><div id="progBar"></div></div>
+    </div>
+  </div>
+</header>
+<div id="ctrlBar"><div class="wrap">
+  <div id="ctrlStrip"><span id="ctrlSummary"></span><button id="ctrlToggle" title="Mở / đóng mục chọn">⌄</button></div>
+  <div id="ctrlPanel">
     <input id="search" type="search" placeholder="🔍 Tìm bài số mấy? Gõ vào đây nè…">
     <div class="tabs">
       <div class="tab active" data-sec="bam-may">⌨️ Bấm máy 🎯</div>
       <div class="tab" data-sec="kinh-nghiem">🧠 Kinh nghiệm làm bài 🚀</div>
-    </div>
-    <div class="progress">
-      <div class="lbl"><span id="progText">🏆 Đã học 0/0 bài</span><span id="progPct">0%</span></div>
-      <div class="bar"><div id="progBar"></div></div>
     </div>
     <div class="chips">
       <div class="chip active" data-f="all">📚 Tất cả</div>
@@ -343,7 +357,7 @@
       <div class="chip" data-f="empty">👀 Hiện cả bài chưa có link</div>
     </div>
   </div>
-</header>
+</div></div>
 <main><div class="wrap"><div id="adminStrip"></div><div id="examBoard"></div><div id="blocks"></div><div id="gridwrap"></div></div></main>
 <footer>Tick “đã học / đã xem” được lưu theo tài khoản của bạn, học trên máy nào cũng đồng bộ ☁️<br>Chủ sửa bảng là web cập nhật dữ liệu mới cho mọi người 📚</footer>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -815,7 +829,7 @@ function renderGrid(){
 }
 document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => {
   document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
-  t.classList.add("active"); sec = t.getAttribute("data-sec"); renderBlocks(); renderGrid();
+  t.classList.add("active"); sec = t.getAttribute("data-sec"); renderBlocks(); renderGrid(); ctrlAfterPick();
 }));
 document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => {
   const f = c.getAttribute("data-f");
@@ -824,9 +838,35 @@ document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () =
     filter = f;
     document.querySelectorAll(".chip").forEach(x => { if (x.getAttribute("data-f") !== "empty") x.classList.toggle("active", x.getAttribute("data-f") === f); });
   }
-  renderGrid();
+  renderGrid(); ctrlAfterPick();
 }));
 document.getElementById("search").addEventListener("input", e => { query = e.target.value; renderGrid(); });
+
+/* ===== THANH DIEU KHIEN DINH + TU THU GON KHI CUON ===== */
+let ctrlTouched = false;
+function updateCtrlSummary(){
+  const t = document.querySelector(".tab.active");
+  const c = document.querySelector(".chip.active");
+  const s = document.getElementById("ctrlSummary");
+  if (s) s.textContent = "🔍 " + (t ? t.textContent.trim() : "") + (c ? " · " + c.textContent.trim() : "");
+  const tg = document.getElementById("ctrlToggle");
+  if (tg) tg.textContent = document.body.classList.contains("ctrl-closed") ? "⌄" : "˄";
+}
+function ctrlAfterPick(){
+  updateCtrlSummary();
+  if (document.body.classList.contains("scrolled")) { ctrlTouched = true; document.body.classList.add("ctrl-closed"); updateCtrlSummary(); }
+}
+window.addEventListener("scroll", () => {
+  const y = window.scrollY || 0;
+  document.body.classList.toggle("scrolled", y > 24);
+  if (y > 300 && !ctrlTouched) document.body.classList.add("ctrl-closed");
+  if (y <= 24) { document.body.classList.remove("ctrl-closed"); ctrlTouched = false; }
+  updateCtrlSummary();
+}, {passive: true});
+function toggleCtrl(){ ctrlTouched = true; document.body.classList.toggle("ctrl-closed"); updateCtrlSummary(); }
+document.getElementById("ctrlToggle").addEventListener("click", e => { e.stopPropagation(); toggleCtrl(); });
+document.getElementById("ctrlStrip").addEventListener("click", toggleCtrl);
+updateCtrlSummary();
 renderBlocks(); renderGrid();
 
 /* ===== CHON KI THI + BANG DEM NGUOC ===== */
