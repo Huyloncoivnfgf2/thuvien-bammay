@@ -922,7 +922,13 @@ function renderExamBoard(){
     const days = Math.round((new Date(next.date + "T00:00:00") - today) / 86400000);
     countHTML = '<div class="eb-count">⏳ ' + (days === 0 ? "Hôm nay: " + esc(next.label) + "!" : "Còn " + days + " ngày nữa — " + esc(next.label) + " (" + fmtD(next.date) + ")") + '</div>';
   } else if ((ex.rounds || []).length) countHTML = '<div class="eb-count">🎉 Các mốc chính đã qua — chúc bạn thi tốt!</div>';
-  const chips = (ex.rounds || []).map(r => '<span class="eb-chip"><b>' + esc(r.label) + '</b>' + (r.examLabel ? '<br>🗓 Thi: ' + esc(r.examLabel) : '') + (r.reg ? '<br>✍️ ' + esc(r.reg) : '') + '</span>').join('');
+  const dayLine = (iso, isExam) => {
+    const d = Math.round((new Date(iso + "T00:00:00") - today) / 86400000);
+    if (d > 0) return '<br>⏳ Còn ' + d + ' ngày';
+    if (d === 0) return isExam ? '<br>🔥 Thi hôm nay!' : '<br>🔥 Hôm nay!';
+    return isExam ? '<br>✔ Đã thi' : '';
+  };
+  const chips = (ex.rounds || []).map(r => '<span class="eb-chip"><b>' + esc(r.label) + '</b>' + (r.examLabel ? '<br>🗓 Thi: ' + esc(r.examLabel) : '') + (r.reg ? '<br>✍️ ' + esc(r.reg) : '') + (r.exam ? dayLine(r.exam, true) : (r.start ? dayLine(r.start, false) : '')) + '</span>').join('');
   box.innerHTML = '<div class="exam-board' + (ex.img ? ' has-logo' : '') + '" style="background:linear-gradient(135deg,' + ex.c1 + ',' + ex.c2 + ')">'
     + '<button class="eb-change" id="examChange">Đổi kì thi</button>'
     + (ex.img ? '<img class="eb-logo" src="' + ex.img + '" alt="">' : '')
